@@ -1,0 +1,64 @@
+body {
+    font-family: sans-serif;
+    background-color: #f4f4f9;
+    color: #333;
+    margin: 0;
+    padding: 20px;
+}
+
+h1 {
+    color: #0056b3;
+}
+
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.timeline-container {
+    width: 100%;
+    height: 300px;
+    border: 1px solid #ccc;
+    overflow: hidden;
+    cursor: grab;
+    background-color: #fff;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+    border-radius: 8px;
+}
+
+#event-info-panel {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    width: 300px;
+    background-color: #fff;
+    border: 1px solid #ccc;
+    padding: 15px;
+    border-radius: 8px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    font-family: monospace;
+    display: none; /* Изначально скрываем панель */
+    cursor: grab; /* Добавляем курсор для перетаскивания */
+}
+
+.event-point {
+    fill: steelblue;
+    stroke: white;
+    stroke-width: 1px;
+    transition: r 0.2s;
+}
+
+.event-point:hover {
+    fill: darkblue;
+    r: 5px;
+}
+
+
+#event-info-panel h2 {
+    margin-top: 0;
+}
+
+#event-data {
+    white-space: pre-wrap;
+    word-break: break-all;
+}
