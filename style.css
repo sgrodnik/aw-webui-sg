@@ -1,66 +1,110 @@
 body {
-    font-family: sans-serif;
-    background-color: #f4f4f9;
+    font-family: Arial, sans-serif;
+    margin: 20px;
+    background-color: #f4f4f4;
     color: #333;
-    margin: 0;
-    padding: 20px;
-}
-
-h1 {
-    color: #0056b3;
 }
 
 .container {
     max-width: 1200px;
     margin: 0 auto;
+    background-color: #fff;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+}
+
+h1 {
+    text-align: center;
+    color: #0056b3;
+}
+
+.controls {
+    margin-bottom: 20px;
+    text-align: center;
+}
+
+.controls button {
+    padding: 10px 15px;
+    margin: 0 5px;
+    background-color: #007bff;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: background-color 0.3s ease;
+}
+
+.controls button:hover {
+    background-color: #0056b3;
 }
 
 .timeline-container {
     width: 100%;
-    height: 300px;
+    height: 400px; /* Adjust as needed */
     border: 1px solid #ccc;
-    overflow: hidden;
-    cursor: grab;
-    background-color: #fff;
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-    border-radius: 8px;
+    border-radius: 5px;
+    overflow: hidden; /* Ensures SVG content stays within bounds */
+    background-color: #e9ecef;
 }
 
-#event-info-panel {
-    position: fixed;
-    top: 20px;
-    right: 20px;
-    width: 300px;
-    background-color: #fff;
-    border: 1px solid #ccc;
-    padding: 15px;
-    border-radius: 8px;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-    font-family: monospace;
-    display: none; /* Изначально скрываем панель */
-    cursor: grab; /* Добавляем курсор для перетаскивания */
+#timeline-svg {
+    display: block; /* Removes extra space below SVG */
 }
 
 .event-segment {
-    fill: steelblue;
-    stroke: white;
-    stroke-width: 1px;
-    transition: fill 0.2s; /* Transition for fill color */
+    fill: steelblue; /* Default color for event segments */
+    cursor: pointer;
+    transition: fill 0.2s ease;
 }
 
 .event-segment:hover {
-    fill: darkblue;
-    /* For rectangles, we might want to slightly change stroke or fill,
-       or add a subtle outline. Changing 'r' is not applicable. */
-    /* Let's keep it simple for now and just change fill */
+    fill: lightcoral;
 }
 
+#event-info-panel {
+    display: none; /* Hidden by default */
+    position: absolute; /* Allows for dragging */
+    top: 20px; /* Initial position */
+    right: 20px; /* Initial position */
+    background-color: rgba(255, 255, 255, 0.9);
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    padding: 15px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    z-index: 1000;
+    cursor: grab; /* Indicate it's draggable */
+    width: 300px; /* Fixed width for the panel */
+    max-height: 300px; /* Max height to allow scrolling if content is large */
+    overflow-y: auto; /* Enable vertical scrolling if content exceeds max-height */
+}
 
 #event-info-panel h2 {
     margin-top: 0;
+    color: #0056b3;
+    font-size: 18px;
 }
 
 #event-data {
-    white-space: pre-wrap;
-    word-break: break-all;
+    font-size: 12px;
+    white-space: pre-wrap; /* Allows text to wrap */
+    word-wrap: break-word; /* Breaks long words */
+    background-color: #f8f9fa;
+    padding: 10px;
+    border-radius: 4px;
+    border: 1px solid #dee2e6;
+}
+
+/* Styles for axis */
+.tick line {
+    stroke: #ccc;
+}
+
+.tick text {
+    font-size: 12px;
+}
+
+.domain {
+    stroke: #333;
 }

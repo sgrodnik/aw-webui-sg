@@ -46,7 +46,7 @@ async function fetchEvents() {
  * @param {Array<Object>} events - The array of event data.
  * @param {number} width - The width of the SVG container.
  * @param {number} height - The height of the SVG container.
- * @returns {Object} An object containing D3 selections and scales.
+ * @returns {Object} An object containing D3 selections, scales, and initial time extent.
  */
 function setupChart(events, width, height) {
     const svg = d3.select(SVG_SELECTOR);
@@ -70,7 +70,7 @@ function setupChart(events, width, height) {
         .attr("transform", `translate(0, ${height - 20})`)
         .call(xAxis);
 
-    return { svg, g, xScale, yScale, xAxisGroup };
+    return { svg, g, xScale, yScale, xAxisGroup, timeExtent }; // Return timeExtent
 }
 
 /**
@@ -83,18 +83,14 @@ function setupInfoPanelDrag(infoPanel) {
     let initialPanelTop, initialPanelRight;
 
     infoPanel.on("mousedown", (event) => {
-        // Ensure the click is on the panel itself, not its content if it were to expand
-        // Check if the target is the panel itself or a child of the panel
         if (event.target === infoPanel.node() || infoPanel.node().contains(event.target)) {
             isDragging = true;
             initialMouseX = event.clientX;
             initialMouseY = event.clientY;
-            // Get current computed styles for top and right
             const computedStyle = window.getComputedStyle(infoPanel.node());
             initialPanelTop = parseFloat(computedStyle.top);
             initialPanelRight = parseFloat(computedStyle.right);
             infoPanel.style("cursor", DRAG_CURSOR_GRABBING);
-            // Prevent default drag behavior if any
             event.preventDefault();
         }
     });
@@ -106,7 +102,7 @@ function setupInfoPanelDrag(infoPanel) {
         const deltaY = event.clientY - initialMouseY;
 
         infoPanel.style("top", (initialPanelTop + deltaY) + "px");
-        infoPanel.style("right", (initialPanelRight - deltaX) + "px"); // Right decreases as mouse moves right
+        infoPanel.style("right", (initialPanelRight - deltaX) + "px");
     });
 
     document.addEventListener("mouseup", () => {
@@ -128,32 +124,32 @@ function setupInfoPanelDrag(infoPanel) {
  * @returns {d3.Selection} The D3 selection for the rendered event segments.
  */
 function renderEventPoints(events, xScale, yScale, g, infoPanel, dataPre) {
-    const BAR_HEIGHT = 10; // Define a height for the bars
+    const BAR_HEIGHT = 10;
 
-    const segments = g.selectAll(EVENT_SEGMENT_CLASS) // Use the new class
+    const segments = g.selectAll(EVENT_SEGMENT_CLASS)
         .data(events)
-        .enter().append("rect") // Changed from circle to rect
-        .attr("class", EVENT_SEGMENT_CLASS) // Use the new class
-        .attr("x", d => xScale(d.timestamp)) // Position from start of event
-        .attr("y", yScale(Y_SCALE_DOMAIN) - BAR_HEIGHT / 2) // Center vertically
+        .enter().append("rect")
+        .attr("class", EVENT_SEGMENT_CLASS)
+        .attr("x", d => xScale(d.timestamp))
+        .attr("y", yScale(Y_SCALE_DOMAIN) - BAR_HEIGHT / 2)
         .attr("width", d => {
             const startTime = d.timestamp.getTime();
-            const endTime = startTime + d.duration * 1000; // duration is in seconds, convert to ms
+            const endTime = startTime + d.duration * 1000;
             return xScale(new Date(endTime)) - xScale(d.timestamp);
         })
-        .attr("height", BAR_HEIGHT) // Set the height of the bar
+        .attr("height", BAR_HEIGHT)
         .on("mouseover", (event, d) => {
             infoPanel.style("display", "block");
 
             const eventInfo = {
                 id: d.id,
-                timestamp: d.timestamp.toLocaleString(), // Преобразуем в читаемый формат
+                timestamp: d.timestamp.toLocaleString(),
                 duration: `${d.duration.toFixed(2)} с.`,
                 data: d.data
             };
             dataPre.text(JSON.stringify(eventInfo, null, 2));
         });
-    return segments; // Return segments instead of points
+    return segments;
 }
 
 /**
@@ -169,20 +165,114 @@ function setupEscapeListener(infoPanel) {
 }
 
 /**
+ * Zooms and pans the timeline to a specific date range.
+ * @param {Date} startDate - The start date of the range.
+ * @param {Date} endDate - The end date of the range.
+ * @param {d3.Selection} svg - The D3 selection for the SVG element.
+ * @param {d3.ScaleTime} originalXScale - The original D3 time scale.
+ * @param {d3.Selection} xAxisGroup - The D3 selection for the x-axis group.
+ * @param {d3.Selection} segments - The D3 selection for the event segments.
+ * @param {number} width - The width of the SVG container.
+ * @param {d3.ZoomBehavior<SVGSVGElement>} zoomBehavior - The D3 zoom behavior.
+ */
+function zoomToRange(startDate, endDate, svg, originalXScale, xAxisGroup, segments, width, zoomBehavior) {
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+
+    const rangeWidth = originalXScale(end) - originalXScale(start);
+    if (rangeWidth <= 0) {
+        console.warn("Invalid date range for zoom.");
+        return;
+    }
+    const k = width / rangeWidth;
+
+    const x = -k * originalXScale(start);
+
+    const newTransform = d3.zoomIdentity.scale(k).translate(x, 0);
+
+    svg.transition().duration(750).call(zoomBehavior.transform, newTransform);
+}
+
+/**
+ * Zooms and pans the timeline to a specific date range.
+ * @param {Date} startDate - The start date of the range.
+ * @param {Date} endDate - The end date of the range.
+ * @param {d3.Selection} svg - The D3 selection for the SVG element.
+ * @param {d3.ScaleTime} originalXScale - The original D3 time scale.
+ * @param {d3.Selection} xAxisGroup - The D3 selection for the x-axis group.
+ * @param {d3.Selection} segments - The D3 selection for the event segments.
+ * @param {number} width - The width of the SVG container.
+ * @param {d3.ZoomBehavior<SVGSVGElement>} zoomBehavior - The D3 zoom behavior.
+ */
+function zoomToRange(startDate, endDate, svg, originalXScale, xAxisGroup, segments, width, zoomBehavior) {
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+
+    const rangeWidth = originalXScale(end) - originalXScale(start);
+    if (rangeWidth <= 0) {
+        console.warn("Invalid date range for zoom.");
+        return;
+    }
+    const k = width / rangeWidth;
+
+    const x = -k * originalXScale(start);
+
+    const newTransform = d3.zoomIdentity.scale(k).translate(x, 0);
+
+    svg.transition().duration(750).call(zoomBehavior.transform, newTransform);
+}
+
+/**
+ * Zooms and pans the timeline to a specific date range.
+ * @param {Date} startDate - The start date of the range.
+ * @param {Date} endDate - The end date of the range.
+ * @param {d3.Selection} svg - The D3 selection for the SVG element.
+ * @param {d3.ScaleTime} originalXScale - The original D3 time scale.
+ * @param {d3.Selection} xAxisGroup - The D3 selection for the x-axis group.
+ * @param {d3.Selection} segments - The D3 selection for the event segments.
+ * @param {number} width - The width of the SVG container.
+ * @param {d3.ZoomBehavior<SVGSVGElement>} zoomBehavior - The D3 zoom behavior.
+ */
+function zoomToRange(startDate, endDate, svg, originalXScale, xAxisGroup, segments, width, zoomBehavior) {
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+
+    const rangeWidth = originalXScale(end) - originalXScale(start);
+    if (rangeWidth <= 0) {
+        console.warn("Invalid date range for zoom.");
+        return;
+    }
+    const k = width / rangeWidth;
+
+    const x = -k * originalXScale(start);
+
+    const newTransform = d3.zoomIdentity.scale(k).translate(x, 0);
+
+    svg.transition().duration(750).call(zoomBehavior.transform, newTransform);
+}
+
+
+/**
  * Sets up the D3 zoom behavior for the SVG.
  * @param {d3.Selection} svg - The D3 selection for the SVG element.
  * @param {d3.ScaleTime} xScale - The D3 time scale for the x-axis.
  * @param {d3.Selection} xAxisGroup - The D3 selection for the x-axis group.
  * @param {d3.Selection} segments - The D3 selection for the event segments.
+ * @param {Array<Date>} timeExtent - The initial time extent of the data.
+ * @param {number} width - The width of the SVG container.
+ * @returns {d3.ZoomBehavior<SVGSVGElement>} The D3 zoom behavior.
  */
-function setupZoom(svg, xScale, xAxisGroup, segments) {
+function setupZoom(svg, xScale, xAxisGroup, segments, timeExtent, width) {
+    const initialXScaleForExtent = d3.scaleTime()
+        .domain(timeExtent)
+        .range([0, width]);
+
     const zoom = d3.zoom()
         .scaleExtent([1, 100])
-        .translateExtent([[0, 0], [Infinity, 0]])
+        .translateExtent([[initialXScaleForExtent(timeExtent[0]), 0], [initialXScaleForExtent(timeExtent[1]), 0]])
         .on("zoom", (event) => {
             const newXScale = event.transform.rescaleX(xScale);
             xAxisGroup.call(d3.axisBottom(newXScale));
-            // Update cx and r for circles to x and width for rects
             segments.attr("x", d => newXScale(d.timestamp))
                   .attr("width", d => {
                       const startTime = d.timestamp.getTime();
@@ -190,7 +280,9 @@ function setupZoom(svg, xScale, xAxisGroup, segments) {
                       return newXScale(new Date(endTime)) - newXScale(d.timestamp);
                   });
         });
+
     svg.call(zoom);
+    return zoom;
 }
 
 document.addEventListener('DOMContentLoaded', async () => {
@@ -204,12 +296,36 @@ document.addEventListener('DOMContentLoaded', async () => {
     const width = container.node().clientWidth;
     const height = container.node().clientHeight;
 
-    const { svg, g, xScale, yScale, xAxisGroup } = setupChart(events, width, height);
+    const { svg, g, xScale, yScale, xAxisGroup, timeExtent } = setupChart(events, width, height);
     const infoPanel = d3.select(INFO_PANEL_SELECTOR);
     const dataPre = d3.select(EVENT_DATA_SELECTOR);
 
+    const segments = renderEventPoints(events, xScale, yScale, g, infoPanel, dataPre);
+
+    const zoomBehavior = setupZoom(svg, xScale, xAxisGroup, segments, timeExtent, width);
+
+    const zoomLastHourButton = d3.select("#zoom-last-hour");
+    const zoomLastDayButton = d3.select("#zoom-last-day");
+    const zoomToMorningButton = d3.select("#zoom-to-morning");
+
+    zoomLastHourButton.on("click", () => {
+        const now = new Date();
+        const oneHourAgo = new Date(now.getTime() - 60 * 60 * 1000);
+        zoomToRange(oneHourAgo, now, svg, xScale, xAxisGroup, segments, width, zoomBehavior);
+    });
+
+    zoomLastDayButton.on("click", () => {
+        const now = new Date();
+        const oneDayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+        zoomToRange(oneDayAgo, now, svg, xScale, xAxisGroup, segments, width, zoomBehavior);
+    });
+
+    zoomToMorningButton.on("click", () => {
+        const now = new Date();
+        const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        zoomToRange(startOfDay, now, svg, xScale, xAxisGroup, segments, width, zoomBehavior);
+    });
+
     setupInfoPanelDrag(infoPanel);
-    const segments = renderEventPoints(events, xScale, yScale, g, infoPanel, dataPre); // Changed variable name
     setupEscapeListener(infoPanel);
-    setupZoom(svg, xScale, xAxisGroup, segments); // Changed variable name
 });
