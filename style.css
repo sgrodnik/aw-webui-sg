@@ -41,16 +41,18 @@ h1 {
     cursor: grab; /* Добавляем курсор для перетаскивания */
 }
 
-.event-point {
+.event-segment {
     fill: steelblue;
     stroke: white;
     stroke-width: 1px;
-    transition: r 0.2s;
+    transition: fill 0.2s; /* Transition for fill color */
 }
 
-.event-point:hover {
+.event-segment:hover {
     fill: darkblue;
-    r: 5px;
+    /* For rectangles, we might want to slightly change stroke or fill,
+       or add a subtle outline. Changing 'r' is not applicable. */
+    /* Let's keep it simple for now and just change fill */
 }
 
 

@@ -6,7 +6,7 @@ const SVG_SELECTOR = "#timeline-svg";
 const TIMELINE_CONTAINER_SELECTOR = ".timeline-container";
 const INFO_PANEL_SELECTOR = "#event-info-panel";
 const EVENT_DATA_SELECTOR = "#event-data";
-const EVENT_POINT_CLASS = "event-point";
+const EVENT_SEGMENT_CLASS = "event-segment";
 const Y_SCALE_DOMAIN = 'events';
 const DRAG_CURSOR_GRABBING = "grabbing";
 const DRAG_CURSOR_GRAB = "grab";
@@ -118,23 +118,30 @@ function setupInfoPanelDrag(infoPanel) {
 }
 
 /**
- * Renders the event points on the timeline and sets up mouseover events.
+ * Renders the event segments on the timeline and sets up mouseover events.
  * @param {Array<Object>} events - The array of event data.
  * @param {d3.ScaleTime} xScale - The D3 time scale for the x-axis.
  * @param {d3.ScalePoint} yScale - The D3 point scale for the y-axis.
  * @param {d3.Selection} g - The D3 selection for the SVG group.
  * @param {d3.Selection} infoPanel - The D3 selection for the info panel.
  * @param {d3.Selection} dataPre - The D3 selection for the pre element to display data.
- * @returns {d3.Selection} The D3 selection for the rendered event points.
+ * @returns {d3.Selection} The D3 selection for the rendered event segments.
  */
 function renderEventPoints(events, xScale, yScale, g, infoPanel, dataPre) {
-    const points = g.selectAll(EVENT_POINT_CLASS)
+    const BAR_HEIGHT = 10; // Define a height for the bars
+
+    const segments = g.selectAll(EVENT_SEGMENT_CLASS) // Use the new class
         .data(events)
-        .enter().append("circle")
-        .attr("class", EVENT_POINT_CLASS)
-        .attr("cx", d => xScale(d.timestamp))
-        .attr("cy", yScale(Y_SCALE_DOMAIN))
-        .attr("r", 3)
+        .enter().append("rect") // Changed from circle to rect
+        .attr("class", EVENT_SEGMENT_CLASS) // Use the new class
+        .attr("x", d => xScale(d.timestamp)) // Position from start of event
+        .attr("y", yScale(Y_SCALE_DOMAIN) - BAR_HEIGHT / 2) // Center vertically
+        .attr("width", d => {
+            const startTime = d.timestamp.getTime();
+            const endTime = startTime + d.duration * 1000; // duration is in seconds, convert to ms
+            return xScale(new Date(endTime)) - xScale(d.timestamp);
+        })
+        .attr("height", BAR_HEIGHT) // Set the height of the bar
         .on("mouseover", (event, d) => {
             infoPanel.style("display", "block");
 
@@ -146,7 +153,7 @@ function renderEventPoints(events, xScale, yScale, g, infoPanel, dataPre) {
             };
             dataPre.text(JSON.stringify(eventInfo, null, 2));
         });
-    return points;
+    return segments; // Return segments instead of points
 }
 
 /**
@@ -166,16 +173,22 @@ function setupEscapeListener(infoPanel) {
  * @param {d3.Selection} svg - The D3 selection for the SVG element.
  * @param {d3.ScaleTime} xScale - The D3 time scale for the x-axis.
  * @param {d3.Selection} xAxisGroup - The D3 selection for the x-axis group.
- * @param {d3.Selection} points - The D3 selection for the event points.
+ * @param {d3.Selection} segments - The D3 selection for the event segments.
  */
-function setupZoom(svg, xScale, xAxisGroup, points) {
+function setupZoom(svg, xScale, xAxisGroup, segments) {
     const zoom = d3.zoom()
         .scaleExtent([1, 100])
         .translateExtent([[0, 0], [Infinity, 0]])
         .on("zoom", (event) => {
             const newXScale = event.transform.rescaleX(xScale);
             xAxisGroup.call(d3.axisBottom(newXScale));
-            points.attr("cx", d => newXScale(d.timestamp));
+            // Update cx and r for circles to x and width for rects
+            segments.attr("x", d => newXScale(d.timestamp))
+                  .attr("width", d => {
+                      const startTime = d.timestamp.getTime();
+                      const endTime = startTime + d.duration * 1000;
+                      return newXScale(new Date(endTime)) - newXScale(d.timestamp);
+                  });
         });
     svg.call(zoom);
 }
@@ -196,7 +209,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const dataPre = d3.select(EVENT_DATA_SELECTOR);
 
     setupInfoPanelDrag(infoPanel);
-    const points = renderEventPoints(events, xScale, yScale, g, infoPanel, dataPre);
+    const segments = renderEventPoints(events, xScale, yScale, g, infoPanel, dataPre); // Changed variable name
     setupEscapeListener(infoPanel);
-    setupZoom(svg, xScale, xAxisGroup, points);
+    setupZoom(svg, xScale, xAxisGroup, segments); // Changed variable name
 });
