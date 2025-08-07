@@ -5,6 +5,23 @@ body {
     color: #333;
 }
 
+#event-edit-panel input[type="text"] {
+    border: none;
+    background-color: transparent;
+    padding: 0;
+    margin: 0;
+    font-size: inherit;
+    color: inherit;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+#event-edit-panel input[type="text"]:focus {
+    border: 1px solid #ccc;
+    background-color: #f9f9f9;
+    padding: 2px;
+}
+
 .container {
     max-width: none; /* Убираем ограничение по ширине */
     margin: 0; /* Убираем автоматические отступы */

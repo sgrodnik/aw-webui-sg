@@ -347,27 +347,8 @@ function renderEventPoints(events, xScale, yScale, g, infoPanel, editPanel, data
         .on("click", (event, d) => {
             if (d.bucket === 'aw-stopwatch') {
                 editPanel.style("display", "block"); // Show edit panel
-
-                d3.select("#edit-event-id").property("value", d.id);
-                d3.select("#edit-title").property("value", d.data.label || '');
-
-                const startTime = d.timestamp;
-                const endTime = new Date(startTime.getTime() + d.duration * 1000);
-
-                const formatDateTimeLocal = (date) => {
-                    const year = date.getFullYear();
-                    const month = (date.getMonth() + 1).toString().padStart(2, '0');
-                    const day = date.getDate().toString().padStart(2, '0');
-                    const hours = date.getHours().toString().padStart(2, '0');
-                    const minutes = date.getMinutes().toString().padStart(2, '0');
-                    return `${year}-${month}-${day}T${hours}:${minutes}`;
-                };
-
-                d3.select("#edit-start-time").property("value", formatDateTimeLocal(startTime));
-                d3.select("#edit-end-time").property("value", formatDateTimeLocal(endTime));
-
-                // Store original event data for saving
-                editPanel.property("originalEvent", d);
+                renderEventEditPanel(d, d3.select("#edit-event-data-table"));
+                editPanel.property("originalEvent", d); // Store original event data for saving
             }
         });
     return segments;
@@ -454,6 +435,44 @@ function setupZoom(svg, xScale, xAxisGroup, xAxisTopGroup, segments, timeExtent,
     return zoom;
 }
 
+function renderEventEditPanel(eventData, container) {
+    container.html(""); // Clear previous content
+
+    const table = container.append("table").attr("class", "event-attributes-table");
+    const tbody = table.append("tbody");
+
+    // ID события (только для чтения)
+    tbody.append("tr").html(`<td>ID:</td><td><input type="text" value="${eventData.id}" readonly></td>`);
+    // Бакет (только для чтения)
+    tbody.append("tr").html(`<td>Бакет:</td><td><input type="text" value="${eventData.bucket}" readonly></td>`);
+
+    // Заголовок (редактируемый)
+    tbody.append("tr").html(`<td>Заголовок:</td><td><input type="text" id="edit-title-input" value="${eventData.data.label || ''}"></td>`);
+
+    // Время начала (редактируемое текстовое поле)
+    const startTime = eventData.timestamp;
+    const endTime = new Date(startTime.getTime() + eventData.duration * 1000);
+
+    tbody.append("tr").html(`<td>Время начала:</td><td><input type="text" id="edit-start-time-input" value="${startTime.toLocaleString()}"></td>`);
+    // Время окончания (редактируемое текстовое поле)
+    tbody.append("tr").html(`<td>Время окончания:</td><td><input type="text" id="edit-end-time-input" value="${endTime.toLocaleString()}"></td>`);
+
+    // Добавляем остальные атрибуты данных, если они есть, как только для чтения
+    if (eventData.data) {
+        for (const key in eventData.data) {
+            if (eventData.data.hasOwnProperty(key) && key !== 'label') { // Исключаем 'label', так как он уже есть как "Заголовок"
+                let value = eventData.data[key];
+                if (typeof value === 'object' && value !== null) {
+                    value = JSON.stringify(value, null, 2);
+                    tbody.append("tr").html(`<td>${key}:</td><td><pre>${value}</pre></td>`);
+                } else {
+                    tbody.append("tr").html(`<td>${key}:</td><td>${value}</td>`);
+                }
+            }
+        }
+    }
+}
+
 document.addEventListener('DOMContentLoaded', async () => {
     const events = await fetchEvents();
     if (events.length === 0) {
@@ -517,9 +536,9 @@ document.addEventListener('DOMContentLoaded', async () => {
             return;
         }
 
-        const newTitle = d3.select("#edit-title").property("value");
-        const newStartTime = new Date(d3.select("#edit-start-time").property("value"));
-        const newEndTime = new Date(d3.select("#edit-end-time").property("value"));
+        const newTitle = d3.select("#edit-title-input").property("value");
+        const newStartTime = new Date(d3.select("#edit-start-time-input").property("value"));
+        const newEndTime = new Date(d3.select("#edit-end-time-input").property("value"));
         const newDuration = (newEndTime.getTime() - newStartTime.getTime()) / 1000;
 
         if (newDuration < 0) {
