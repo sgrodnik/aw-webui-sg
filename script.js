@@ -255,8 +255,11 @@ function renderEventTable(eventData, container) {
 function renderLatestEventsTable(events, container) {
     container.select("tbody").html(""); // Clear previous content
 
-    // Sort events by timestamp in descending order to get the latest
-    const latestEvents = events.sort((a, b) => b.timestamp - a.timestamp).slice(0, 10); // Get latest 10 events
+    // Filter events to show only 'aw-stopwatch'
+    const filteredEvents = events.filter(event => event.bucket === 'aw-stopwatch');
+
+    // Sort filtered events by timestamp in descending order to get the latest
+    const latestEvents = filteredEvents.sort((a, b) => b.timestamp - a.timestamp).slice(0, 10); // Get latest 10 events
 
     latestEvents.forEach(event => {
         const row = container.select("tbody").append("tr");
