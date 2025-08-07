@@ -117,3 +117,8 @@ h1 {
 .domain {
     stroke: #333;
 }
+
+.x-axis-top .tick text {
+    fill: #0056b3; /* Цвет текста для верхней оси */
+    font-weight: bold;
+}

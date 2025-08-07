@@ -67,10 +67,18 @@ function setupChart(events, width, height) {
 
     const xAxis = d3.axisBottom(xScale);
     const xAxisGroup = g.append("g")
+        .attr("class", "x-axis-bottom")
         .attr("transform", `translate(0, ${height - 20})`)
         .call(xAxis);
 
-    return { svg, g, xScale, yScale, xAxisGroup, timeExtent }; // Return timeExtent
+    const xAxisTop = d3.axisTop(xScale)
+        .tickFormat(d => formatRelativeTime(d)); // Используем новую функцию для форматирования
+    const xAxisTopGroup = g.append("g")
+        .attr("class", "x-axis-top")
+        .attr("transform", `translate(0, 20)`) // Размещаем сверху
+        .call(xAxisTop);
+
+    return { svg, g, xScale, yScale, xAxisGroup, xAxisTopGroup, timeExtent }; // Return timeExtent
 }
 
 /**
@@ -82,6 +90,33 @@ function setupChart(events, width, height) {
  * @param {Object} eventData - The event object containing data to display.
  * @param {d3.Selection} container - The D3 selection for the container to render the table into.
  */
+/**
+ * Formats a date into a relative time string (e.g., "1 мин назад", "1 час 1 мин назад").
+ * @param {Date} date - The date to format.
+ * @param {Date} now - The current reference date (defaults to current time).
+ * @returns {string} The relative time string.
+ */
+function formatRelativeTime(date, now = new Date()) {
+    const seconds = Math.floor((now.getTime() - date.getTime()) / 1000);
+
+    if (seconds < 60) return `${seconds}с `;
+
+    const minutes = Math.floor(seconds / 60);
+    if (minutes < 60) return `${minutes}м `;
+
+    const hours = Math.floor(minutes / 60);
+    if (hours < 24) return `${hours}ч ${minutes % 60}м `;
+
+    const days = Math.floor(hours / 24);
+    if (days < 30) return `${days}д ${hours % 24}ч `;
+
+    const months = Math.floor(days / 30);
+    if (months < 12) return `${months}М ${days % 30}д `;
+
+    const years = Math.floor(months / 12);
+    return `${years}г ${months % 12}М `;
+}
+
 function formatDuration(seconds, includeSeconds = true) {
     var hours = Math.floor(seconds / 3600);
     var minutes = Math.floor((seconds % 3600) / 60);
@@ -245,12 +280,13 @@ function zoomToRange(startDate, endDate, svg, originalXScale, xAxisGroup, segmen
  * @param {d3.Selection} svg - The D3 selection for the SVG element.
  * @param {d3.ScaleTime} xScale - The D3 time scale for the x-axis.
  * @param {d3.Selection} xAxisGroup - The D3 selection for the x-axis group.
+ * @param {d3.Selection} xAxisTopGroup - The D3 selection for the top x-axis group.
  * @param {d3.Selection} segments - The D3 selection for the event segments.
  * @param {Array<Date>} timeExtent - The initial time extent of the data.
  * @param {number} width - The width of the SVG container.
  * @returns {d3.ZoomBehavior<SVGSVGElement>} The D3 zoom behavior.
  */
-function setupZoom(svg, xScale, xAxisGroup, segments, timeExtent, width) {
+function setupZoom(svg, xScale, xAxisGroup, xAxisTopGroup, segments, timeExtent, width) {
     const initialXScaleForExtent = d3.scaleTime()
         .domain(timeExtent)
         .range([0, width]);
@@ -261,6 +297,7 @@ function setupZoom(svg, xScale, xAxisGroup, segments, timeExtent, width) {
         .on("zoom", (event) => {
             const newXScale = event.transform.rescaleX(xScale);
             xAxisGroup.call(d3.axisBottom(newXScale));
+            xAxisTopGroup.call(d3.axisTop(newXScale).tickFormat(d => formatRelativeTime(d))); // Обновляем верхнюю ось
             segments.attr("x", d => newXScale(d.timestamp))
                   .attr("width", d => {
                       const startTime = d.timestamp.getTime();
@@ -284,13 +321,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     const width = container.node().clientWidth;
     const height = container.node().clientHeight;
 
-    const { svg, g, xScale, yScale, xAxisGroup, timeExtent } = setupChart(events, width, height);
+    const { svg, g, xScale, yScale, xAxisGroup, xAxisTopGroup, timeExtent } = setupChart(events, width, height);
     const infoPanel = d3.select(INFO_PANEL_SELECTOR);
     const dataPre = d3.select(EVENT_DATA_SELECTOR);
 
     const segments = renderEventPoints(events, xScale, yScale, g, infoPanel, dataPre);
 
-    const zoomBehavior = setupZoom(svg, xScale, xAxisGroup, segments, timeExtent, width);
+    const zoomBehavior = setupZoom(svg, xScale, xAxisGroup, xAxisTopGroup, segments, timeExtent, width);
 
     const zoomLastHourButton = d3.select("#zoom-last-hour");
     const zoomLastDayButton = d3.select("#zoom-last-day");
