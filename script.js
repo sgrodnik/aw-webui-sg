@@ -547,7 +547,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     zoomToMorningButton.on("click", () => {
         const now = new Date();
-        const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 8, 0, 0, 0); // Устанавливаем время на 8 утра
         zoomToRange(startOfDay, now, svg, xScale, yScale, xAxisGroup, segments, width, zoomBehavior); // Pass yScale
     });
 
