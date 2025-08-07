@@ -187,7 +187,7 @@ function zoomToRange(startDate, endDate, svg, originalXScale, xAxisGroup, segmen
     }
     const k = width / rangeWidth;
 
-    const x = -k * originalXScale(start);
+    const x = -originalXScale(start);
 
     const newTransform = d3.zoomIdentity.scale(k).translate(x, 0);
 
