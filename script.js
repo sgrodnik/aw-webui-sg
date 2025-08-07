@@ -164,63 +164,6 @@ function setupEscapeListener(infoPanel) {
     });
 }
 
-/**
- * Zooms and pans the timeline to a specific date range.
- * @param {Date} startDate - The start date of the range.
- * @param {Date} endDate - The end date of the range.
- * @param {d3.Selection} svg - The D3 selection for the SVG element.
- * @param {d3.ScaleTime} originalXScale - The original D3 time scale.
- * @param {d3.Selection} xAxisGroup - The D3 selection for the x-axis group.
- * @param {d3.Selection} segments - The D3 selection for the event segments.
- * @param {number} width - The width of the SVG container.
- * @param {d3.ZoomBehavior<SVGSVGElement>} zoomBehavior - The D3 zoom behavior.
- */
-function zoomToRange(startDate, endDate, svg, originalXScale, xAxisGroup, segments, width, zoomBehavior) {
-    const start = new Date(startDate);
-    const end = new Date(endDate);
-
-    const rangeWidth = originalXScale(end) - originalXScale(start);
-    if (rangeWidth <= 0) {
-        console.warn("Invalid date range for zoom.");
-        return;
-    }
-    const k = width / rangeWidth;
-
-    const x = -k * originalXScale(start);
-
-    const newTransform = d3.zoomIdentity.scale(k).translate(x, 0);
-
-    svg.transition().duration(750).call(zoomBehavior.transform, newTransform);
-}
-
-/**
- * Zooms and pans the timeline to a specific date range.
- * @param {Date} startDate - The start date of the range.
- * @param {Date} endDate - The end date of the range.
- * @param {d3.Selection} svg - The D3 selection for the SVG element.
- * @param {d3.ScaleTime} originalXScale - The original D3 time scale.
- * @param {d3.Selection} xAxisGroup - The D3 selection for the x-axis group.
- * @param {d3.Selection} segments - The D3 selection for the event segments.
- * @param {number} width - The width of the SVG container.
- * @param {d3.ZoomBehavior<SVGSVGElement>} zoomBehavior - The D3 zoom behavior.
- */
-function zoomToRange(startDate, endDate, svg, originalXScale, xAxisGroup, segments, width, zoomBehavior) {
-    const start = new Date(startDate);
-    const end = new Date(endDate);
-
-    const rangeWidth = originalXScale(end) - originalXScale(start);
-    if (rangeWidth <= 0) {
-        console.warn("Invalid date range for zoom.");
-        return;
-    }
-    const k = width / rangeWidth;
-
-    const x = -k * originalXScale(start);
-
-    const newTransform = d3.zoomIdentity.scale(k).translate(x, 0);
-
-    svg.transition().duration(750).call(zoomBehavior.transform, newTransform);
-}
 
 /**
  * Zooms and pans the timeline to a specific date range.
