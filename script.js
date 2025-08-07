@@ -275,7 +275,10 @@ function renderLatestEventsTable(events, container) {
 function setupInfoPanelDrag(infoPanel) {
     let isDragging = false;
     let initialMouseX, initialMouseY;
-    let initialPanelTop, initialPanelRight;
+    let initialPanelTop;
+    let initialPanelLeft; // New variable for left position
+    let initialPanelRight; // Keep for right position
+    let isPositionedByLeft = false; // Flag to determine positioning
 
     infoPanel.on("mousedown", (event) => {
         // Prevent dragging if the click target is an input, button, or label
@@ -290,7 +293,16 @@ function setupInfoPanelDrag(infoPanel) {
             initialMouseY = event.clientY;
             const computedStyle = window.getComputedStyle(infoPanel.node());
             initialPanelTop = parseFloat(computedStyle.top);
-            initialPanelRight = parseFloat(computedStyle.right);
+
+            // Determine if the panel is positioned by 'left' or 'right'
+            if (computedStyle.left !== 'auto' && parseFloat(computedStyle.left) !== 0) {
+                initialPanelLeft = parseFloat(computedStyle.left);
+                isPositionedByLeft = true;
+            } else {
+                initialPanelRight = parseFloat(computedStyle.right);
+                isPositionedByLeft = false;
+            }
+
             infoPanel.style("cursor", DRAG_CURSOR_GRABBING);
             event.preventDefault();
         }
@@ -303,7 +315,14 @@ function setupInfoPanelDrag(infoPanel) {
         const deltaY = event.clientY - initialMouseY;
 
         infoPanel.style("top", (initialPanelTop + deltaY) + "px");
-        infoPanel.style("right", (initialPanelRight - deltaX) + "px");
+
+        if (isPositionedByLeft) {
+            infoPanel.style("left", (initialPanelLeft + deltaX) + "px");
+            infoPanel.style("right", "auto"); // Ensure right is not set
+        } else {
+            infoPanel.style("right", (initialPanelRight - deltaX) + "px");
+            infoPanel.style("left", "auto"); // Ensure left is not set
+        }
     });
 
     document.addEventListener("mouseup", () => {
