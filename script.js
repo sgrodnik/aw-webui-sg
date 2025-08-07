@@ -165,24 +165,26 @@ function generateRelativeTimeTicks(currentXScale, width, now = new Date()) {
  * @returns {string} The relative time string.
  */
 function formatRelativeTime(date, now = new Date()) {
-    const seconds = Math.floor((now.getTime() - date.getTime()) / 1000);
+    const sec = Math.floor((now.getTime() - date.getTime()) / 1000);
+    const sign = sec < 0 ? "-" : "";
+    const seconds = Math.abs(sec);
 
-    if (seconds < 60) return `${seconds}с `;
+    if (seconds < 60) return `${sign}${seconds}с `;
 
     const minutes = Math.floor(seconds / 60);
-    if (minutes < 60) return `${minutes}м `;
+    if (minutes < 60) return `${sign}${minutes}м `;
 
     const hours = Math.floor(minutes / 60);
-    if (hours < 24) return `${hours}ч ${minutes % 60}м `;
+    if (hours < 24) return `${sign}${hours}ч ${minutes % 60}м `.replaceAll(" 0м", "");
 
-    const days = Math.floor(minutes / (60 * 24)); // Corrected calculation for days
-    if (days < 30) return `${days}д ${hours % 24}ч `;
+    const days = Math.floor(minutes / (60 * 24));
+    if (days < 30) return `${sign}${days}д ${hours % 24}ч `.replaceAll(" 0ч", "");
 
     const months = Math.floor(days / 30);
-    if (months < 12) return `${months}М ${days % 30}д `;
+    if (months < 12) return `${sign}${months}М ${days % 30}д `.replaceAll(" 0д", "");
 
     const years = Math.floor(months / 12);
-    return `${years}г ${months % 12}М `;
+    return `${sign}${years}г ${months % 12}М `;
 }
 
 function formatDuration(seconds, includeSeconds = true) {
