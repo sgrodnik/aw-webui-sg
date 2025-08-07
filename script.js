@@ -261,14 +261,14 @@ function renderLatestEventsTable(events, container) {
     const filteredEvents = events.filter(event => event.bucket === 'aw-stopwatch');
 
     // Sort filtered events by timestamp in descending order to get the latest
-    const latestEvents = filteredEvents.sort((a, b) => b.timestamp - a.timestamp).slice(0, 10); // Get latest 10 events
+    const latestEvents = filteredEvents.sort((a, b) => b.timestamp - a.timestamp).slice(0, 15); // Get latest 10 events
 
     latestEvents.forEach(event => {
         const row = container.select("tbody").append("tr");
         row.append("td").text(event.timestamp.toLocaleString());
         const status = event.data.running ? " ⏳" : "";
         row.append("td").text(formatDuration(event.duration) + status);
-        row.append("td").text(`${event.bucket}: ${event.data.label || event.data.status || "N/A"}`); // Display bucket and relevant data
+        row.append("td").text(`${event.data.label || event.data.status || "N/A"}`);
     });
 }
 
