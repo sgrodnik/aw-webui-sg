@@ -73,11 +73,12 @@ h1 {
 .event-segment-group .event-body {
     fill: steelblue; /* Default color for event segments */
     cursor: pointer;
-    transition: fill 0.2s ease;
+    transition: fill 0.2s ease, filter 0.2s ease;
 }
 
 .event-segment-group:hover .event-body {
     fill: lightcoral;
+    filter: drop-shadow(0 0 5px rgba(0, 123, 255, 0.7)); /* Thin glow effect */
 }
 
 .event-segment-group.running .event-body {
