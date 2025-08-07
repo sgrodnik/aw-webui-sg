@@ -277,6 +277,12 @@ function setupInfoPanelDrag(infoPanel) {
     let initialPanelTop, initialPanelRight;
 
     infoPanel.on("mousedown", (event) => {
+        // Prevent dragging if the click target is an input, button, or label
+        const targetTagName = event.target.tagName;
+        if (targetTagName === 'INPUT' || targetTagName === 'BUTTON' || targetTagName === 'LABEL') {
+            return;
+        }
+
         if (event.target === infoPanel.node() || infoPanel.node().contains(event.target)) {
             isDragging = true;
             initialMouseX = event.clientX;
