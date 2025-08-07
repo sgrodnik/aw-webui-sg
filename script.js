@@ -82,6 +82,19 @@ function setupChart(events, width, height) {
  * @param {Object} eventData - The event object containing data to display.
  * @param {d3.Selection} container - The D3 selection for the container to render the table into.
  */
+function formatDuration(seconds, includeSeconds = true) {
+    var hours = Math.floor(seconds / 3600);
+    var minutes = Math.floor((seconds % 3600) / 60);
+    var remainingSeconds = Math.floor(seconds % 60);
+
+    var result = "";
+    if (hours > 0) result += hours + "ч ";
+    if (minutes > 0) result += minutes + "м ";
+    if (includeSeconds) result += remainingSeconds + "с";
+
+    return result.trim();
+}
+
 function renderEventTable(eventData, container) {
     container.html(""); // Clear previous content
 
@@ -91,7 +104,14 @@ function renderEventTable(eventData, container) {
     // Add basic event info
     tbody.append("tr").html(`<td>ID:</td><td>${eventData.id}</td>`);
     tbody.append("tr").html(`<td>Время:</td><td>${eventData.timestamp.toLocaleString()}</td>`);
-    tbody.append("tr").html(`<td>Длительность:</td><td>${eventData.duration.toFixed(2)} с.</td>`);
+
+    var displayedDuration;
+    if (eventData.duration > 900) { // 15 minutes = 900 seconds
+        displayedDuration = formatDuration(eventData.duration, false);
+    } else {
+        displayedDuration = formatDuration(eventData.duration);
+    }
+    tbody.append("tr").html(`<td>Длительность:</td><td><span title="${eventData.duration.toFixed(2)} с.">${displayedDuration}</span></td>`);
 
     // Add data attributes
     if (eventData.data) {
