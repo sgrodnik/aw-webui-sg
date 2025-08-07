@@ -319,13 +319,6 @@ function setupInfoPanelDrag(infoPanel) {
 function renderEventPoints(events, xScale, yScale, g, infoPanel, dataPre) {
     const BAR_HEIGHT = 10;
 
-    // Add Y-axis for buckets
-    const yAxis = d3.axisLeft(yScale);
-    g.append("g")
-        .attr("class", "y-axis")
-        .attr("transform", `translate(40, 0)`) // Adjust position as needed
-        .call(yAxis);
-
     const segments = g.selectAll(EVENT_SEGMENT_CLASS)
         .data(events)
         .enter().append("rect")
