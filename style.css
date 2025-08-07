@@ -63,6 +63,10 @@ h1 {
     fill: lightcoral;
 }
 
+.event-segment.running {
+    fill: #ff6347; /* Tomato color */
+}
+
 #event-info-panel {
     display: none; /* Hidden by default */
     position: absolute; /* Allows for dragging */

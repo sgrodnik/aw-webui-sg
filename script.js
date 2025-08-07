@@ -307,7 +307,7 @@ function renderEventPoints(events, xScale, yScale, g, infoPanel, dataPre) {
     const segments = g.selectAll(EVENT_SEGMENT_CLASS)
         .data(events)
         .enter().append("rect")
-        .attr("class", EVENT_SEGMENT_CLASS)
+        .attr("class", d => d.data.running ? `${EVENT_SEGMENT_CLASS} running` : EVENT_SEGMENT_CLASS)
         .attr("x", d => xScale(d.timestamp))
         .attr("y", yScale(Y_SCALE_DOMAIN) - BAR_HEIGHT / 2)
         .attr("width", d => {
