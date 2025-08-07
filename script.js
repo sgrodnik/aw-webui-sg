@@ -5,7 +5,7 @@ const apiUrl = 'http://localhost:5600/api/0/buckets/aw-stopwatch/events?limit=10
 const SVG_SELECTOR = "#timeline-svg";
 const TIMELINE_CONTAINER_SELECTOR = ".timeline-container";
 const INFO_PANEL_SELECTOR = "#event-info-panel";
-const EVENT_DATA_SELECTOR = "#event-data";
+const EVENT_DATA_SELECTOR = "#event-data-table";
 const EVENT_SEGMENT_CLASS = "event-segment";
 const Y_SCALE_DOMAIN = 'events';
 const DRAG_CURSOR_GRABBING = "grabbing";
@@ -77,10 +77,41 @@ function setupChart(events, width, height) {
  * Sets up drag-and-drop functionality for the info panel.
  * @param {d3.Selection} infoPanel - The D3 selection for the info panel.
  */
+/**
+ * Renders event data as a table inside the specified container.
+ * @param {Object} eventData - The event object containing data to display.
+ * @param {d3.Selection} container - The D3 selection for the container to render the table into.
+ */
+function renderEventTable(eventData, container) {
+    container.html(""); // Clear previous content
+
+    var table = container.append("table").attr("class", "event-attributes-table");
+    var tbody = table.append("tbody");
+
+    // Add basic event info
+    tbody.append("tr").html(`<td>ID:</td><td>${eventData.id}</td>`);
+    tbody.append("tr").html(`<td>Время:</td><td>${eventData.timestamp.toLocaleString()}</td>`);
+    tbody.append("tr").html(`<td>Длительность:</td><td>${eventData.duration.toFixed(2)} с.</td>`);
+
+    // Add data attributes
+    if (eventData.data) {
+        for (var key in eventData.data) {
+            if (eventData.data.hasOwnProperty(key)) {
+                var value = eventData.data[key];
+                // Handle nested objects or arrays
+                if (typeof value === 'object' && value !== null) {
+                    value = JSON.stringify(value, null, 2); // Pretty print nested objects
+                }
+                tbody.append("tr").html(`<td>${key}:</td><td>${value}</td>`);
+            }
+        }
+    }
+}
+
 function setupInfoPanelDrag(infoPanel) {
-    let isDragging = false;
-    let initialMouseX, initialMouseY;
-    let initialPanelTop, initialPanelRight;
+    var isDragging = false;
+    var initialMouseX, initialMouseY;
+    var initialPanelTop, initialPanelRight;
 
     infoPanel.on("mousedown", (event) => {
         if (event.target === infoPanel.node() || infoPanel.node().contains(event.target)) {
@@ -141,13 +172,7 @@ function renderEventPoints(events, xScale, yScale, g, infoPanel, dataPre) {
         .on("mouseover", (event, d) => {
             infoPanel.style("display", "block");
 
-            const eventInfo = {
-                id: d.id,
-                timestamp: d.timestamp.toLocaleString(),
-                duration: `${d.duration.toFixed(2)} с.`,
-                data: d.data
-            };
-            dataPre.text(JSON.stringify(eventInfo, null, 2));
+            renderEventTable(d, dataPre);
         });
     return segments;
 }

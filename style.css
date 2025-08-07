@@ -86,14 +86,23 @@ h1 {
     font-size: 18px;
 }
 
-#event-data {
+.event-attributes-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 10px;
     font-size: 12px;
-    white-space: pre-wrap; /* Allows text to wrap */
-    word-wrap: break-word; /* Breaks long words */
-    background-color: #f8f9fa;
-    padding: 10px;
-    border-radius: 4px;
+}
+
+.event-attributes-table td {
+    padding: 5px;
     border: 1px solid #dee2e6;
+    vertical-align: top;
+}
+
+.event-attributes-table td:first-child {
+    font-weight: bold;
+    width: 35%; /* Adjust as needed */
+    background-color: #f8f9fa;
 }
 
 /* Styles for axis */
