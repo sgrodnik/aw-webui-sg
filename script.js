@@ -243,11 +243,12 @@ function renderEventTable(eventData, container) {
         for (const key in eventData.data) {
             if (eventData.data.hasOwnProperty(key)) {
                 let value = eventData.data[key];
-                // Handle nested objects or arrays
                 if (typeof value === 'object' && value !== null) {
                     value = JSON.stringify(value, null, 2); // Pretty print nested objects
+                    tbody.append("tr").html(`<td>${key}:</td><td><pre>${value}</pre></td>`);
+                } else {
+                    tbody.append("tr").html(`<td>${key}:</td><td>${value}</td>`);
                 }
-                tbody.append("tr").html(`<td>${key}:</td><td>${value}</td>`);
             }
         }
     }
@@ -547,8 +548,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             duration: newDuration,
             data: {
                 ...originalEvent.data, // Keep existing data
-                label: newTitle, // Update label
-                original_event: originalEvent // Store original event as backup
+                label: newTitle // Update label
             }
         };
 
