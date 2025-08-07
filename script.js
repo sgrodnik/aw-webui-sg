@@ -332,7 +332,20 @@ function renderEventPoints(events, xScale, yScale, g, infoPanel, editPanel, data
     const segments = g.selectAll(`.${EVENT_SEGMENT_CLASS}`)
         .data(events)
         .enter().append("g") // Append a group for each event
-        .attr("class", d => d.data.running ? `${EVENT_SEGMENT_CLASS} running` : EVENT_SEGMENT_CLASS)
+        .attr("class", d => {
+            let classes = [EVENT_SEGMENT_CLASS];
+            if (d.data.running) {
+                classes.push("running");
+            }
+            if (d.bucket === 'aw-watcher-afk_CPU17974') {
+                if (d.data.status === 'afk') {
+                    classes.push("afk-event");
+                } else if (d.data.status === 'not-afk') {
+                    classes.push("non-afk-event");
+                }
+            }
+            return classes.join(" ");
+        })
         .attr("transform", d => `translate(${xScale(d.timestamp)}, ${yScale(d.bucket) - BAR_HEIGHT / 2})`) // Translate the group
         .on("mouseover", (event, d) => {
             infoPanel.style("display", "block");
