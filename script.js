@@ -441,7 +441,7 @@ function setupZoom(svg, xScale, yScale, xAxisGroup, xAxisTopGroup, segments, tim
         .range([0, width]);
 
     const zoom = d3.zoom()
-        .scaleExtent([1, 100])
+        .scaleExtent([1, 5000])
         .on("zoom", (event) => {
             const newXScale = event.transform.rescaleX(xScale);
             xAxisGroup.call(d3.axisBottom(newXScale));
