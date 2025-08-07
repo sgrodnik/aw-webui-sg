@@ -526,6 +526,16 @@ function renderEventEditPanel(eventData, container) {
 }
 
 document.addEventListener('DOMContentLoaded', async () => {
+    // Load saved position and values
+    const zoomPanel = d3.select("#zoom-panel");
+    const savedZoomPanelPosition = localStorage.getItem('zoomPanelPosition');
+    if (savedZoomPanelPosition) {
+        const { top, left } = JSON.parse(savedZoomPanelPosition);
+        zoomPanel.style("top", top);
+        zoomPanel.style("left", left);
+    }
+    zoomPanel.style("visibility", "visible");
+
     const events = await fetchEvents();
     if (events.length === 0) {
         document.body.innerHTML += "<p>Данные не найдены.</p>";
@@ -545,25 +555,15 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     const zoomBehavior = setupZoom(svg, xScale, yScale, xAxisGroup, xAxisTopGroup, segments, timeExtent, width); // Pass yScale
 
-    const zoomPanel = d3.select("#zoom-panel");
     const zoomLastHourInput = d3.select("#zoom-last-hour-input");
-    const zoomLastDayInput = d3.select("#zoom-last-day-input");
-    const zoomToMorningInput = d3.select("#zoom-to-morning-input");
-
-    // Load saved position and values
-    const savedZoomPanelPosition = localStorage.getItem('zoomPanelPosition');
-    if (savedZoomPanelPosition) {
-        const { top, left } = JSON.parse(savedZoomPanelPosition);
-        zoomPanel.style("top", top);
-        zoomPanel.style("left", left);
-    }
-
     const savedLastHourValue = localStorage.getItem('zoomLastHourValue');
     if (savedLastHourValue) zoomLastHourInput.property("value", savedLastHourValue);
 
+    const zoomLastDayInput = d3.select("#zoom-last-day-input");
     const savedLastDayValue = localStorage.getItem('zoomLastDayValue');
     if (savedLastDayValue) zoomLastDayInput.property("value", savedLastDayValue);
 
+    const zoomToMorningInput = d3.select("#zoom-to-morning-input");
     const savedToMorningValue = localStorage.getItem('zoomToMorningValue');
     if (savedToMorningValue) zoomToMorningInput.property("value", savedToMorningValue);
 

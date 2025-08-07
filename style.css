@@ -71,6 +71,7 @@ h1 {
     width: 280px; /* Fixed width for the panel */
     max-height: 300px; /* Max height to allow scrolling if content is large */
     overflow-y: auto; /* Enable vertical scrolling if content exceeds max-height */
+    visibility: hidden; /* Hidden by default to prevent jump */
 }
 
 #zoom-panel h2 {
@@ -92,7 +93,7 @@ h1 {
 }
 
 .zoom-option input[type="number"] {
-    width: 50px; /* Adjust width as needed */
+    width: 10px; /* Adjust width as needed */
     margin: 0 5px;
     padding: 3px 5px;
     border: 1px solid #ccc;
@@ -128,7 +129,7 @@ h1 {
 }
 
 .event-segment-group .event-body {
-    fill: steelblue; /* Default color for event segments */
+    fill: rgb(211, 211, 211); /* Default color for event segments */
     cursor: pointer;
     transition: fill 0.2s ease, filter 0.2s ease;
 }
