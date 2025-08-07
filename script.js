@@ -233,6 +233,20 @@ function renderEventTable(eventData, container) {
     }
 }
 
+function renderLatestEventsTable(events, container) {
+    container.select("tbody").html(""); // Clear previous content
+
+    // Sort events by timestamp in descending order to get the latest
+    var latestEvents = events.sort((a, b) => b.timestamp - a.timestamp).slice(0, 10); // Get latest 10 events
+
+    latestEvents.forEach(event => {
+        var row = container.select("tbody").append("tr");
+        row.append("td").text(event.timestamp.toLocaleString());
+        row.append("td").text(formatDuration(event.duration));
+        row.append("td").text(event.data.label || "N/A"); // Display app or title
+    });
+}
+
 function setupInfoPanelDrag(infoPanel) {
     var isDragging = false;
     var initialMouseX, initialMouseY;
@@ -425,4 +439,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     setupInfoPanelDrag(infoPanel);
     setupEscapeListener(infoPanel);
+
+    // Render the latest events table
+    const latestEventsTable = d3.select("#latest-events-table");
+    renderLatestEventsTable(events, latestEventsTable);
 });

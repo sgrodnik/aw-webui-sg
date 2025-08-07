@@ -122,3 +122,43 @@ h1 {
     fill: #0056b3; /* Цвет текста для верхней оси */
     font-weight: bold;
 }
+
+#latest-events-table-container {
+    margin-top: 30px;
+    padding: 20px;
+    background-color: #fff;
+    border-radius: 8px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+}
+
+#latest-events-table-container h2 {
+    text-align: center;
+    color: #0056b3;
+    margin-bottom: 15px;
+}
+
+#latest-events-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 10px;
+}
+
+#latest-events-table th,
+#latest-events-table td {
+    border: 1px solid #ddd;
+    padding: 8px;
+    text-align: left;
+}
+
+#latest-events-table th {
+    background-color: #f2f2f2;
+    font-weight: bold;
+}
+
+#latest-events-table tbody tr:nth-child(even) {
+    background-color: #f9f9f9;
+}
+
+#latest-events-table tbody tr:hover {
+    background-color: #e9e9e9;
+}
