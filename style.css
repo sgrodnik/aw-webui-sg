@@ -70,18 +70,23 @@ h1 {
     display: block; /* Removes extra space below SVG */
 }
 
-.event-segment {
+.event-segment-group .event-body {
     fill: steelblue; /* Default color for event segments */
     cursor: pointer;
     transition: fill 0.2s ease;
 }
 
-.event-segment:hover {
+.event-segment-group:hover .event-body {
     fill: lightcoral;
 }
 
-.event-segment.running {
+.event-segment-group.running .event-body {
     fill: #ff6347; /* Tomato color */
+}
+
+.event-start-point,
+.event-end-point {
+    fill: black; /* Цвет точек */
 }
 
 #event-info-panel {
