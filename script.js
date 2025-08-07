@@ -616,7 +616,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 throw new Error(`HTTP error! status: ${createResponse.status}`);
             }
             console.log('New event created successfully:', await createResponse.json());
-            alert('Event updated successfully!');
+            // alert('Event updated successfully!');
             location.reload(); // Refresh the page
         } catch (error) {
             console.error('Failed to create new event:', error);
