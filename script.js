@@ -1,5 +1,8 @@
-// URL вашего локального API
-const apiUrl = 'http://localhost:5600/api/0/buckets/aw-stopwatch/events?limit=1000';
+const bucketUrls = {
+    'aw-stopwatch': 'http://localhost:5600/api/0/buckets/aw-stopwatch/events?limit=1000',
+    'aw-watcher-window_CPU17974': 'http://localhost:5600/api/0/buckets/aw-watcher-window_CPU17974/events?limit=1000',
+    'aw-watcher-afk_CPU17974': 'http://localhost:5600/api/0/buckets/aw-watcher-afk_CPU17974/events?limit=1000'
+};
 
 // Constants for selectors and configuration
 const SVG_SELECTOR = "#timeline-svg";
@@ -7,46 +10,51 @@ const TIMELINE_CONTAINER_SELECTOR = ".timeline-container";
 const INFO_PANEL_SELECTOR = "#event-info-panel";
 const EVENT_DATA_SELECTOR = "#event-data-table";
 const EVENT_SEGMENT_CLASS = "event-segment";
-const Y_SCALE_DOMAIN = 'events';
 const DRAG_CURSOR_GRABBING = "grabbing";
 const DRAG_CURSOR_GRAB = "grab";
 
 /**
- * Fetches event data from the API.
- * @returns {Promise<Array<Object>>} A promise that resolves to an array of event objects.
+ * Fetches event data from the API for multiple buckets.
+ * @returns {Promise<Array<Object>>} A promise that resolves to an array of event objects from all buckets.
  */
 async function fetchEvents() {
-    try {
-        const response = await fetch(apiUrl);
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
+    const allEvents = [];
+    for (const bucketName in bucketUrls) {
+        if (!bucketUrls.hasOwnProperty(bucketName)) continue;
+        const url = bucketUrls[bucketName];
+        try {
+            const response = await fetch(url);
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status} for bucket ${bucketName}`);
+            }
+            const events = await response.json();
+
+            // Add bucket name to each event and process
+            const processedEvents = events.map(d => {
+                // Ищем и обновляем текущее событие
+                if (d.data.running === true && d.duration === 0) {
+                    const now = new Date();
+                    const eventTimestamp = new Date(d.timestamp);
+                    d.duration = (now - eventTimestamp) / 1000; // Длительность в секундах
+                }
+                return {
+                    ...d,
+                    bucket: bucketName,
+                    timestamp: new Date(d.timestamp)
+                };
+            });
+            allEvents.push(...processedEvents);
+
+        } catch (error) {
+            console.error(`Не удалось получить данные для бакета ${bucketName}:`, error);
         }
-        const events = await response.json();
-
-        // Ищем и обновляем текущее событие
-        var runningEvent = events.find(e => e.data.running === true);
-        if (runningEvent && runningEvent.duration === 0) {
-            var now = new Date();
-            var eventTimestamp = new Date(runningEvent.timestamp);
-            runningEvent.duration = (now - eventTimestamp) / 1000; // Длительность в секундах
-        }
-
-        // Преобразуем timestamp в объекты Date
-        var processedEvents = events.map(d => ({
-            ...d,
-            timestamp: new Date(d.timestamp)
-        }));
-
-        if (processedEvents.length === 0) {
-            console.warn("API вернуло пустой список событий.");
-        }
-
-        return processedEvents;
-
-    } catch (error) {
-        console.error("Не удалось получить данные:", error);
-        return [];
     }
+
+    if (allEvents.length === 0) {
+        console.warn("API вернуло пустой список событий.");
+    }
+
+    return allEvents;
 }
 
 /**
@@ -69,9 +77,11 @@ function setupChart(events, width, height) {
         .domain(timeExtent)
         .range([0, width]);
 
+    const uniqueBuckets = [...new Set(events.map(d => d.bucket))].sort();
     const yScale = d3.scalePoint()
-        .domain([Y_SCALE_DOMAIN])
-        .range([height / 2, height / 2]);
+        .domain(uniqueBuckets)
+        .range([height - 50, 50]) // Adjust range to give space for labels and axes
+        .padding(0.5); // Add some padding between bands
 
     const xAxis = d3.axisBottom(xScale);
     const xAxisGroup = g.append("g")
@@ -196,11 +206,11 @@ function formatRelativeTime(date, now = new Date()) {
 }
 
 function formatDuration(seconds, includeSeconds = true) {
-    var hours = Math.floor(seconds / 3600);
-    var minutes = Math.floor((seconds % 3600) / 60);
-    var remainingSeconds = Math.floor(seconds % 60);
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    const remainingSeconds = Math.floor(seconds % 60);
 
-    var result = "";
+    let result = "";
     if (hours > 0) result += hours + "ч ";
     if (minutes > 0) result += minutes + "м ";
     if (includeSeconds) result += remainingSeconds + "с";
@@ -211,14 +221,15 @@ function formatDuration(seconds, includeSeconds = true) {
 function renderEventTable(eventData, container) {
     container.html(""); // Clear previous content
 
-    var table = container.append("table").attr("class", "event-attributes-table");
-    var tbody = table.append("tbody");
+    const table = container.append("table").attr("class", "event-attributes-table");
+    const tbody = table.append("tbody");
 
     // Add basic event info
+    tbody.append("tr").html(`<td>Бакет:</td><td>${eventData.bucket}</td>`); // Add bucket name
     tbody.append("tr").html(`<td>ID:</td><td>${eventData.id}</td>`);
     tbody.append("tr").html(`<td>Время:</td><td>${eventData.timestamp.toLocaleString()}</td>`);
 
-    var displayedDuration;
+    let displayedDuration;
     if (eventData.duration > 900) { // 15 minutes = 900 seconds
         displayedDuration = formatDuration(eventData.duration, false);
     } else {
@@ -228,9 +239,9 @@ function renderEventTable(eventData, container) {
 
     // Add data attributes
     if (eventData.data) {
-        for (var key in eventData.data) {
+        for (const key in eventData.data) {
             if (eventData.data.hasOwnProperty(key)) {
-                var value = eventData.data[key];
+                let value = eventData.data[key];
                 // Handle nested objects or arrays
                 if (typeof value === 'object' && value !== null) {
                     value = JSON.stringify(value, null, 2); // Pretty print nested objects
@@ -245,21 +256,21 @@ function renderLatestEventsTable(events, container) {
     container.select("tbody").html(""); // Clear previous content
 
     // Sort events by timestamp in descending order to get the latest
-    var latestEvents = events.sort((a, b) => b.timestamp - a.timestamp).slice(0, 10); // Get latest 10 events
+    const latestEvents = events.sort((a, b) => b.timestamp - a.timestamp).slice(0, 10); // Get latest 10 events
 
     latestEvents.forEach(event => {
-        var row = container.select("tbody").append("tr");
+        const row = container.select("tbody").append("tr");
         row.append("td").text(event.timestamp.toLocaleString());
         const status = event.data.running ? " ⏳" : "";
         row.append("td").text(formatDuration(event.duration) + status);
-        row.append("td").text(event.data.label || "N/A"); // Display app or title
+        row.append("td").text(`${event.bucket}: ${event.data.label || event.data.status || "N/A"}`); // Display bucket and relevant data
     });
 }
 
 function setupInfoPanelDrag(infoPanel) {
-    var isDragging = false;
-    var initialMouseX, initialMouseY;
-    var initialPanelTop, initialPanelRight;
+    let isDragging = false;
+    let initialMouseX, initialMouseY;
+    let initialPanelTop, initialPanelRight;
 
     infoPanel.on("mousedown", (event) => {
         if (event.target === infoPanel.node() || infoPanel.node().contains(event.target)) {
@@ -305,12 +316,19 @@ function setupInfoPanelDrag(infoPanel) {
 function renderEventPoints(events, xScale, yScale, g, infoPanel, dataPre) {
     const BAR_HEIGHT = 10;
 
+    // Add Y-axis for buckets
+    const yAxis = d3.axisLeft(yScale);
+    g.append("g")
+        .attr("class", "y-axis")
+        .attr("transform", `translate(40, 0)`) // Adjust position as needed
+        .call(yAxis);
+
     const segments = g.selectAll(EVENT_SEGMENT_CLASS)
         .data(events)
         .enter().append("rect")
         .attr("class", d => d.data.running ? `${EVENT_SEGMENT_CLASS} running` : EVENT_SEGMENT_CLASS)
         .attr("x", d => xScale(d.timestamp))
-        .attr("y", yScale(Y_SCALE_DOMAIN) - BAR_HEIGHT / 2)
+        .attr("y", d => yScale(d.bucket) - BAR_HEIGHT / 2) // Use bucket for Y position
         .attr("width", d => {
             const startTime = d.timestamp.getTime();
             const endTime = startTime + d.duration * 1000;

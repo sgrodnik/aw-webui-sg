@@ -122,6 +122,15 @@ h1 {
     stroke: #333;
 }
 
+.y-axis line {
+    stroke: #ccc;
+}
+
+.y-axis text {
+    font-size: 12px;
+    fill: #333;
+}
+
 .x-axis-top .tick text {
     fill: #0056b3; /* Цвет текста для верхней оси */
     font-weight: bold;
