@@ -8,6 +8,7 @@ const bucketUrls = {
 const SVG_SELECTOR = "#timeline-svg";
 const TIMELINE_CONTAINER_SELECTOR = ".timeline-container";
 const INFO_PANEL_SELECTOR = "#event-info-panel";
+const EDIT_PANEL_SELECTOR = "#event-edit-panel";
 const EVENT_DATA_SELECTOR = "#event-data-table";
 const EVENT_SEGMENT_CLASS = "event-segment";
 const DRAG_CURSOR_GRABBING = "grabbing";
@@ -313,10 +314,11 @@ function setupInfoPanelDrag(infoPanel) {
  * @param {d3.ScalePoint} yScale - The D3 point scale for the y-axis.
  * @param {d3.Selection} g - The D3 selection for the SVG group.
  * @param {d3.Selection} infoPanel - The D3 selection for the info panel.
+ * @param {d3.Selection} editPanel - The D3 selection for the edit panel.
  * @param {d3.Selection} dataPre - The D3 selection for the pre element to display data.
  * @returns {d3.Selection} The D3 selection for the rendered event segments.
  */
-function renderEventPoints(events, xScale, yScale, g, infoPanel, dataPre) {
+function renderEventPoints(events, xScale, yScale, g, infoPanel, editPanel, dataPre) {
     const BAR_HEIGHT = 10;
 
     const segments = g.selectAll(EVENT_SEGMENT_CLASS)
@@ -333,8 +335,33 @@ function renderEventPoints(events, xScale, yScale, g, infoPanel, dataPre) {
         .attr("height", BAR_HEIGHT)
         .on("mouseover", (event, d) => {
             infoPanel.style("display", "block");
-
             renderEventTable(d, dataPre);
+        })
+        .on("click", (event, d) => {
+            if (d.bucket === 'aw-stopwatch') {
+                editPanel.style("display", "block"); // Show edit panel
+
+                d3.select("#edit-event-id").property("value", d.id);
+                d3.select("#edit-title").property("value", d.data.label || '');
+
+                const startTime = d.timestamp;
+                const endTime = new Date(startTime.getTime() + d.duration * 1000);
+
+                const formatDateTimeLocal = (date) => {
+                    const year = date.getFullYear();
+                    const month = (date.getMonth() + 1).toString().padStart(2, '0');
+                    const day = date.getDate().toString().padStart(2, '0');
+                    const hours = date.getHours().toString().padStart(2, '0');
+                    const minutes = date.getMinutes().toString().padStart(2, '0');
+                    return `${year}-${month}-${day}T${hours}:${minutes}`;
+                };
+
+                d3.select("#edit-start-time").property("value", formatDateTimeLocal(startTime));
+                d3.select("#edit-end-time").property("value", formatDateTimeLocal(endTime));
+
+                // Store original event data for saving
+                editPanel.property("originalEvent", d);
+            }
         });
     return segments;
 }
@@ -343,10 +370,11 @@ function renderEventPoints(events, xScale, yScale, g, infoPanel, dataPre) {
  * Sets up the event listener for the Escape key to hide the info panel.
  * @param {d3.Selection} infoPanel - The D3 selection for the info panel.
  */
-function setupEscapeListener(infoPanel) {
+function setupEscapeListener(infoPanel, editPanel) {
     document.addEventListener('keydown', (event) => {
         if (event.key === 'Escape') {
             infoPanel.style('display', 'none');
+            editPanel.style('display', 'none');
         }
     });
 }
@@ -432,9 +460,10 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     const { svg, g, xScale, yScale, xAxisGroup, xAxisTopGroup, timeExtent } = setupChart(events, width, height);
     const infoPanel = d3.select(INFO_PANEL_SELECTOR);
+    const editPanel = d3.select(EDIT_PANEL_SELECTOR);
     const dataPre = d3.select(EVENT_DATA_SELECTOR);
 
-    const segments = renderEventPoints(events, xScale, yScale, g, infoPanel, dataPre);
+    const segments = renderEventPoints(events, xScale, yScale, g, infoPanel, editPanel, dataPre);
 
     const zoomBehavior = setupZoom(svg, xScale, xAxisGroup, xAxisTopGroup, segments, timeExtent, width);
 
@@ -464,7 +493,78 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
 
     setupInfoPanelDrag(infoPanel);
-    setupEscapeListener(infoPanel);
+    setupInfoPanelDrag(editPanel); // Make edit panel draggable
+    setupEscapeListener(infoPanel, editPanel);
+
+    // Handle edit panel buttons
+    d3.select("#edit-cancel-button").on("click", () => {
+        editPanel.style("display", "none");
+    });
+
+    d3.select("#edit-save-button").on("click", async (e) => {
+        e.preventDefault();
+
+        const originalEvent = editPanel.property("originalEvent");
+        if (!originalEvent) {
+            alert("No event data to save.");
+            return;
+        }
+
+        const newTitle = d3.select("#edit-title").property("value");
+        const newStartTime = new Date(d3.select("#edit-start-time").property("value"));
+        const newEndTime = new Date(d3.select("#edit-end-time").property("value"));
+        const newDuration = (newEndTime.getTime() - newStartTime.getTime()) / 1000;
+
+        if (newDuration < 0) {
+            alert('End time cannot be before start time.');
+            return;
+        }
+
+        // Delete the old event
+        try {
+            const deleteResponse = await fetch(`http://localhost:5600/api/0/buckets/${originalEvent.bucket}/events/${originalEvent.id}`, {
+                method: 'DELETE'
+            });
+            if (!deleteResponse.ok) {
+                throw new Error(`HTTP error! status: ${deleteResponse.status}`);
+            }
+            console.log(`Event ${originalEvent.id} deleted successfully.`);
+        } catch (error) {
+            console.error(`Failed to delete event ${originalEvent.id}:`, error);
+            alert('Failed to delete original event. Please check console for details.');
+            return;
+        }
+
+        // Create a new event
+        const newEvent = {
+            timestamp: newStartTime.toISOString(),
+            duration: newDuration,
+            data: {
+                ...originalEvent.data, // Keep existing data
+                label: newTitle, // Update label
+                original_event: originalEvent // Store original event as backup
+            }
+        };
+
+        try {
+            const createResponse = await fetch(`http://localhost:5600/api/0/buckets/${originalEvent.bucket}/events`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(newEvent)
+            });
+            if (!createResponse.ok) {
+                throw new Error(`HTTP error! status: ${createResponse.status}`);
+            }
+            console.log('New event created successfully:', await createResponse.json());
+            alert('Event updated successfully!');
+            location.reload(); // Refresh the page
+        } catch (error) {
+            console.error('Failed to create new event:', error);
+            alert('Failed to create new event. Please check console for details.');
+        }
+    });
 
     // Render the latest events table
     const latestEventsTable = d3.select("#latest-events-table");
