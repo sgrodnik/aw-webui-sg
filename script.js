@@ -250,7 +250,8 @@ function renderLatestEventsTable(events, container) {
     latestEvents.forEach(event => {
         var row = container.select("tbody").append("tr");
         row.append("td").text(event.timestamp.toLocaleString());
-        row.append("td").text(formatDuration(event.duration));
+        const status = event.data.running ? " ⏳" : "";
+        row.append("td").text(formatDuration(event.duration) + status);
         row.append("td").text(event.data.label || "N/A"); // Display app or title
     });
 }
