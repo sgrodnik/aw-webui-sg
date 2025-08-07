@@ -382,11 +382,17 @@ function renderEventPoints(events, xScale, yScale, g, infoPanel, editPanel, data
  * Sets up the event listener for the Escape key to hide the info panel.
  * @param {d3.Selection} infoPanel - The D3 selection for the info panel.
  */
-function setupEscapeListener(infoPanel, editPanel) {
+function setupEscapeListener(infoPanel, editPanel, zoomPanel) {
     document.addEventListener('keydown', (event) => {
         if (event.key === 'Escape') {
-            infoPanel.style('display', 'none');
-            editPanel.style('display', 'none');
+            if (editPanel.style('display') === 'block') {
+                editPanel.style('display', 'none');
+            } else if (infoPanel.style('display') === 'block') {
+                infoPanel.style('display', 'none');
+            } else {
+                // Toggle zoomPanel visibility
+                zoomPanel.style('display', zoomPanel.style('display') === 'none' ? 'block' : 'none');
+            }
         }
     });
 }
@@ -526,34 +532,89 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     const zoomBehavior = setupZoom(svg, xScale, yScale, xAxisGroup, xAxisTopGroup, segments, timeExtent, width); // Pass yScale
 
-    const zoomLastHourButton = d3.select("#zoom-last-hour");
-    const zoomLastDayButton = d3.select("#zoom-last-day");
-    const zoomToMorningButton = d3.select("#zoom-to-morning");
+    const zoomPanel = d3.select("#zoom-panel");
+    const zoomLastHourInput = d3.select("#zoom-last-hour-input");
+    const zoomLastDayInput = d3.select("#zoom-last-day-input");
+    const zoomToMorningInput = d3.select("#zoom-to-morning-input");
 
-    // Функция для масштабирования до последнего часа
-    function zoomToLastHour() {
-        const now = new Date();
-        const oneHourAgo = new Date(now.getTime() - 60 * 60 * 1000);
-        zoomToRange(oneHourAgo, now, svg, xScale, yScale, xAxisGroup, segments, width, zoomBehavior); // Pass yScale
+    // Load saved position and values
+    const savedZoomPanelPosition = localStorage.getItem('zoomPanelPosition');
+    if (savedZoomPanelPosition) {
+        const { top, left } = JSON.parse(savedZoomPanelPosition);
+        zoomPanel.style("top", top);
+        zoomPanel.style("left", left);
     }
 
-    zoomLastHourButton.on("click", zoomToLastHour);
+    const savedLastHourValue = localStorage.getItem('zoomLastHourValue');
+    if (savedLastHourValue) zoomLastHourInput.property("value", savedLastHourValue);
 
-    zoomLastDayButton.on("click", () => {
+    const savedLastDayValue = localStorage.getItem('zoomLastDayValue');
+    if (savedLastDayValue) zoomLastDayInput.property("value", savedLastDayValue);
+
+    const savedToMorningValue = localStorage.getItem('zoomToMorningValue');
+    if (savedToMorningValue) zoomToMorningInput.property("value", savedToMorningValue);
+
+    // Function to save panel position
+    function saveZoomPanelPosition() {
+        const computedStyle = window.getComputedStyle(zoomPanel.node());
+        const top = computedStyle.top;
+        const left = computedStyle.left;
+        localStorage.setItem('zoomPanelPosition', JSON.stringify({ top, left }));
+    }
+
+    // Function to save input values
+    function saveInputValues() {
+        localStorage.setItem('zoomLastHourValue', zoomLastHourInput.property("value"));
+        localStorage.setItem('zoomLastDayValue', zoomLastDayInput.property("value"));
+        localStorage.setItem('zoomToMorningValue', zoomToMorningInput.property("value"));
+    }
+
+    // Setup drag for zoom panel
+    setupInfoPanelDrag(zoomPanel);
+    zoomPanel.on("mouseup", saveZoomPanelPosition); // Save position after drag ends
+    zoomLastHourInput.on("change", saveInputValues);
+    zoomLastDayInput.on("change", saveInputValues);
+    zoomToMorningInput.on("change", saveInputValues);
+
+    // Zoom functions
+    d3.select("#zoom-last-hour-option").on("click", () => {
+        const hours = parseInt(zoomLastHourInput.property("value"));
+        if (isNaN(hours) || hours < 1 || hours > 99) {
+            alert("Пожалуйста, введите число от 1 до 99 для часов.");
+            return;
+        }
         const now = new Date();
-        const oneDayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
-        zoomToRange(oneDayAgo, now, svg, xScale, yScale, xAxisGroup, segments, width, zoomBehavior); // Pass yScale
+        const startTime = new Date(now.getTime() - hours * 60 * 60 * 1000);
+        zoomToRange(startTime, now, svg, xScale, yScale, xAxisGroup, segments, width, zoomBehavior);
     });
 
-    zoomToMorningButton.on("click", () => {
+    d3.select("#zoom-last-day-option").on("click", () => {
+        const days = parseInt(zoomLastDayInput.property("value"));
+        if (isNaN(days) || days < 1 || days > 99) {
+            alert("Пожалуйста, введите число от 1 до 99 для суток.");
+            return;
+        }
         const now = new Date();
-        const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 8, 0, 0, 0); // Устанавливаем время на 8 утра
-        zoomToRange(startOfDay, now, svg, xScale, yScale, xAxisGroup, segments, width, zoomBehavior); // Pass yScale
+        const startTime = new Date(now.getTime() - days * 24 * 60 * 60 * 1000);
+        zoomToRange(startTime, now, svg, xScale, yScale, xAxisGroup, segments, width, zoomBehavior);
+    });
+
+    d3.select("#zoom-to-morning-option").on("click", () => {
+        const hour = parseInt(zoomToMorningInput.property("value"));
+        const now = new Date();
+        const currentHour = now.getHours();
+        if (isNaN(hour) || hour < 0 || hour > currentHour) {
+            alert(`Пожалуйста, введите число от 0 до ${currentHour} для часов утра.`);
+            return;
+        }
+        const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate(), hour, 0, 0, 0);
+        zoomToRange(startOfDay, now, svg, xScale, yScale, xAxisGroup, segments, width, zoomBehavior);
     });
 
     setupInfoPanelDrag(infoPanel);
     setupInfoPanelDrag(editPanel); // Make edit panel draggable
-    setupEscapeListener(infoPanel, editPanel);
+    setupInfoPanelDrag(zoomPanel); // Make zoom panel draggable
+    setupEscapeListener(infoPanel, editPanel, zoomPanel);
 
     // Handle edit panel buttons
     d3.select("#edit-cancel-button").on("click", () => {
@@ -629,5 +690,5 @@ document.addEventListener('DOMContentLoaded', async () => {
     renderLatestEventsTable(events, latestEventsTable);
 
     // Автоматически масштабировать до последнего часа при загрузке
-    zoomToLastHour();
+    d3.select("#zoom-last-hour-option").dispatch('click');
 });

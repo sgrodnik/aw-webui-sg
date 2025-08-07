@@ -14,12 +14,28 @@
 
     <div class="container">
         <div class="controls">
-            <button id="zoom-last-hour">Последний час</button>
-            <button id="zoom-last-day">Сутки</button>
-            <button id="zoom-to-morning">С утра</button>
         </div>
         <div class="timeline-container">
             <svg id="timeline-svg"></svg>
+        </div>
+    </div>
+
+    <div id="zoom-panel">
+        <h2>Масштабирование</h2>
+        <div class="zoom-option" id="zoom-last-hour-option">
+            <span>Показать последние </span>
+            <input type="number" id="zoom-last-hour-input" value="1" min="1" max="99">
+            <span> часов</span>
+        </div>
+        <div class="zoom-option" id="zoom-last-day-option">
+            <span>Показать </span>
+            <input type="number" id="zoom-last-day-input" value="1" min="1" max="99">
+            <span> последних суток</span>
+        </div>
+        <div class="zoom-option" id="zoom-to-morning-option">
+            <span>Показать с </span>
+            <input type="number" id="zoom-to-morning-input" value="8" min="0" max="23">
+            <span> часов утра</span>
         </div>
     </div>
 

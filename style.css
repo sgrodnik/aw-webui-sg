@@ -57,6 +57,63 @@ h1 {
     background-color: #0056b3;
 }
 
+#zoom-panel {
+    position: absolute;
+    top: 10px; /* Default top position */
+    left: 10px; /* Default left position */
+    background-color: rgba(255, 255, 255, 0.9);
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    padding: 15px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    z-index: 1000;
+    cursor: grab; /* Indicate it's draggable */
+    width: 280px; /* Fixed width for the panel */
+    max-height: 300px; /* Max height to allow scrolling if content is large */
+    overflow-y: auto; /* Enable vertical scrolling if content exceeds max-height */
+}
+
+#zoom-panel h2 {
+    margin-top: 0;
+    color: #0056b3;
+    font-size: 18px;
+    margin-bottom: 10px;
+}
+
+.zoom-option {
+    display: flex;
+    align-items: center;
+    margin-bottom: 8px;
+    font-size: 14px;
+}
+
+.zoom-option span {
+    white-space: nowrap;
+}
+
+.zoom-option input[type="number"] {
+    width: 50px; /* Adjust width as needed */
+    margin: 0 5px;
+    padding: 3px 5px;
+    border: 1px solid #ccc;
+    border-radius: 3px;
+    font-size: 14px;
+    text-align: center;
+    -moz-appearance: textfield; /* Hide arrows in Firefox */
+}
+
+.zoom-option input[type="number"]::-webkit-outer-spin-button,
+.zoom-option input[type="number"]::-webkit-inner-spin-button {
+    -webkit-appearance: none; /* Hide arrows in Chrome, Safari, Edge */
+    margin: 0;
+}
+
+.zoom-option input[type="number"]:focus {
+    outline: none;
+    border-color: #007bff;
+    box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+}
+
 .timeline-container {
     width: 100%;
     height: 200px; /* Уменьшаем высоту таймлайна */
