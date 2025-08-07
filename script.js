@@ -72,6 +72,7 @@ function setupChart(events, width, height) {
         .call(xAxis);
 
     const xAxisTop = d3.axisTop(xScale)
+        .tickValues(generateRelativeTimeTicks(xScale, width)) // Используем новую функцию для генерации тиков
         .tickFormat(d => formatRelativeTime(d)); // Используем новую функцию для форматирования
     const xAxisTopGroup = g.append("g")
         .attr("class", "x-axis-top")
@@ -96,6 +97,73 @@ function setupChart(events, width, height) {
  * @param {Date} now - The current reference date (defaults to current time).
  * @returns {string} The relative time string.
  */
+/**
+ * Generates an array of "smart" relative time ticks based on the current time scale and width.
+ * The ticks are rounded to sensible intervals (minutes, hours, days) relative to 'now'.
+ * @param {d3.ScaleTime} currentXScale - The current D3 time scale.
+ * @param {number} width - The width of the SVG container.
+ * @param {Date} now - The current reference date (defaults to current time).
+ * @returns {Array<Date>} An array of Date objects representing the tick values.
+ */
+function generateRelativeTimeTicks(currentXScale, width, now = new Date()) {
+    const domain = currentXScale.domain();
+    const visibleDurationMs = domain[1].getTime() - domain[0].getTime(); // Duration of the visible range in milliseconds
+
+    let tickInterval;
+    let tickStep;
+
+    // Determine the appropriate tick interval based on the visible duration
+    if (visibleDurationMs < 2 * 60 * 60 * 1000) { // Less than 2 hours
+        tickInterval = d3.timeMinute;
+        tickStep = 5; // 5-minute intervals
+        if (visibleDurationMs < 30 * 60 * 1000) tickStep = 1; // 1-minute intervals for very short durations
+        else if (visibleDurationMs < 60 * 60 * 1000) tickStep = 5; // 5-minute intervals for less than an hour
+        else tickStep = 10; // 10-minute intervals for up to 2 hours
+    } else if (visibleDurationMs < 2 * 24 * 60 * 60 * 1000) { // Less than 2 days
+        tickInterval = d3.timeHour;
+        tickStep = 1; // 1-hour intervals
+        if (visibleDurationMs > 12 * 60 * 60 * 1000) tickStep = 3; // 3-hour intervals for longer durations
+    } else { // More than 2 days
+        tickInterval = d3.timeDay;
+        tickStep = 1; // 1-day intervals
+        if (visibleDurationMs > 7 * 24 * 60 * 60 * 1000) tickStep = 7; // 7-day intervals for longer durations
+    }
+
+    // Generate ticks relative to 'now'
+    const ticks = [];
+    let currentTick = tickInterval.offset(now, 0); // Start at 'now' or nearest interval
+
+    // Adjust currentTick to be a multiple of tickStep relative to 'now'
+    const nowMs = now.getTime();
+    const currentTickMs = currentTick.getTime();
+    const intervalMs = tickInterval.offset(now, tickStep).getTime() - nowMs; // Duration of one step
+
+    // Calculate the offset from 'now' to the nearest 'round' tick
+    const offsetFromNow = (nowMs - currentTickMs) % intervalMs;
+    currentTick = new Date(currentTickMs + offsetFromNow);
+
+    // Generate ticks backwards from 'now'
+    while (currentTick.getTime() >= domain[0].getTime()) {
+        ticks.unshift(currentTick);
+        currentTick = tickInterval.offset(currentTick, -tickStep);
+    }
+
+    // Generate ticks forwards from 'now'
+    currentTick = tickInterval.offset(now, tickStep);
+    while (currentTick.getTime() <= domain[1].getTime()) {
+        ticks.push(currentTick);
+        currentTick = tickInterval.offset(currentTick, tickStep);
+    }
+
+    return ticks;
+}
+
+/**
+ * Formats a date into a relative time string (e.g., "1 мин назад", "1 час 1 мин назад").
+ * @param {Date} date - The date to format.
+ * @param {Date} now - The current reference date (defaults to current time).
+ * @returns {string} The relative time string.
+ */
 function formatRelativeTime(date, now = new Date()) {
     const seconds = Math.floor((now.getTime() - date.getTime()) / 1000);
 
@@ -107,7 +175,7 @@ function formatRelativeTime(date, now = new Date()) {
     const hours = Math.floor(minutes / 60);
     if (hours < 24) return `${hours}ч ${minutes % 60}м `;
 
-    const days = Math.floor(hours / 24);
+    const days = Math.floor(minutes / (60 * 24)); // Corrected calculation for days
     if (days < 30) return `${days}д ${hours % 24}ч `;
 
     const months = Math.floor(days / 30);
@@ -297,7 +365,9 @@ function setupZoom(svg, xScale, xAxisGroup, xAxisTopGroup, segments, timeExtent,
         .on("zoom", (event) => {
             const newXScale = event.transform.rescaleX(xScale);
             xAxisGroup.call(d3.axisBottom(newXScale));
-            xAxisTopGroup.call(d3.axisTop(newXScale).tickFormat(d => formatRelativeTime(d))); // Обновляем верхнюю ось
+            xAxisTopGroup.call(d3.axisTop(newXScale)
+                .tickValues(generateRelativeTimeTicks(newXScale, width)) // Обновляем тики верхней оси
+                .tickFormat(d => formatRelativeTime(d))); // Обновляем верхнюю ось
             segments.attr("x", d => newXScale(d.timestamp))
                   .attr("width", d => {
                       const startTime = d.timestamp.getTime();
