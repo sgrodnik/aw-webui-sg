@@ -23,8 +23,16 @@ async function fetchEvents() {
         }
         const events = await response.json();
 
+        // Ищем и обновляем текущее событие
+        var runningEvent = events.find(e => e.data.running === true);
+        if (runningEvent && runningEvent.duration === 0) {
+            var now = new Date();
+            var eventTimestamp = new Date(runningEvent.timestamp);
+            runningEvent.duration = (now - eventTimestamp) / 1000; // Длительность в секундах
+        }
+
         // Преобразуем timestamp в объекты Date
-        const processedEvents = events.map(d => ({
+        var processedEvents = events.map(d => ({
             ...d,
             timestamp: new Date(d.timestamp)
         }));
