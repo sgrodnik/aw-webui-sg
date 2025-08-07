@@ -428,11 +428,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     const zoomLastDayButton = d3.select("#zoom-last-day");
     const zoomToMorningButton = d3.select("#zoom-to-morning");
 
-    zoomLastHourButton.on("click", () => {
+    // Функция для масштабирования до последнего часа
+    function zoomToLastHour() {
         const now = new Date();
         const oneHourAgo = new Date(now.getTime() - 60 * 60 * 1000);
         zoomToRange(oneHourAgo, now, svg, xScale, xAxisGroup, segments, width, zoomBehavior);
-    });
+    }
+
+    zoomLastHourButton.on("click", zoomToLastHour);
 
     zoomLastDayButton.on("click", () => {
         const now = new Date();
@@ -452,4 +455,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Render the latest events table
     const latestEventsTable = d3.select("#latest-events-table");
     renderLatestEventsTable(events, latestEventsTable);
+
+    // Автоматически масштабировать до последнего часа при загрузке
+    zoomToLastHour();
 });
