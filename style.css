@@ -75,6 +75,15 @@ h1 {
     background-color: #138496; /* Darker teal on hover */
 }
 
+.button-group .split:disabled {
+    background-color: #cccccc; /* Grey out disabled button */
+    cursor: not-allowed;
+}
+
+.split-mode-field {
+    background-color: #f0f8ff; /* Light blue background for new fields */
+}
+
 #zoom-panel {
     position: absolute;
     top: 10px; /* Default top position */

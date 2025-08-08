@@ -396,7 +396,8 @@ function renderEventPoints(events, xScale, yScale, g, infoPanel, editPanel, data
         .on("click", (event, d) => {
             if (d.bucket === 'aw-stopwatch') {
                 editPanel.style("display", "block");
-                renderEventEditPanel(d, d3.select("#edit-event-data-table"));
+                editPanel.property("isSplitMode", false); // Initialize split mode flag
+                renderEventEditPanel(d, d3.select("#edit-event-data-table"), editPanel.property("isSplitMode"));
                 editPanel.property("originalEvent", d);
             }
         });
@@ -529,7 +530,7 @@ function setupZoom(svg, xScale, yScale, xAxisGroup, xAxisTopGroup, segments, tim
     return zoom;
 }
 
-function renderEventEditPanel(eventData, container) {
+function renderEventEditPanel(eventData, container, isSplitMode = false) {
     container.html("");
 
     const table = container.append("table").attr("class", "event-attributes-table");
@@ -540,10 +541,21 @@ function renderEventEditPanel(eventData, container) {
     tbody.append("tr").html(`<td>Title:</td><td><input type="text" id="edit-title-input" value="${eventData.data.label || ''}"></td>`);
 
     const startTime = eventData.timestamp;
-    const endTime = new Date(startTime.getTime() + eventData.duration * 1000);
+    let endTime = new Date(startTime.getTime() + eventData.duration * 1000);
 
     tbody.append("tr").html(`<td>Start Time:</td><td><input type="text" id="edit-start-time-input" value="${toLocalISO(startTime)}"></td>`);
     tbody.append("tr").html(`<td>End Time:</td><td><input type="text" id="edit-end-time-input" value="${toLocalISO(endTime)}"></td>`);
+
+    if (isSplitMode) {
+        const splitTime = new Date(startTime.getTime() + eventData.duration * 500); // Half duration
+        endTime = splitTime; // First event ends at split time
+
+        tbody.select("#edit-end-time-input").property("value", toLocalISO(endTime));
+
+        tbody.append("tr").attr("class", "split-mode-field").html(`<td>Title 2:</td><td><input type="text" id="edit-title-2-input" value="${eventData.data.label || ''}"></td>`);
+        tbody.append("tr").attr("class", "split-mode-field").html(`<td>Start Time 2:</td><td><input type="text" id="edit-start-time-2-input" value="${toLocalISO(splitTime)}"></td>`);
+        tbody.append("tr").attr("class", "split-mode-field").html(`<td>End Time 2:</td><td><input type="text" id="edit-end-time-2-input" value="${toLocalISO(new Date(eventData.timestamp.getTime() + eventData.duration * 1000))}"></td>`);
+    }
 
     if (eventData.data) {
         for (const key in eventData.data) {
@@ -594,6 +606,9 @@ async function main() {
 
     // --- Refresh Function ---
     const refreshDataAndRedraw = async () => {
+        // Save current zoom/pan state
+        const currentTransform = d3.zoomTransform(svg.node());
+
         events = await fetchEvents();
 
         // Clear previous chart elements
@@ -614,11 +629,11 @@ async function main() {
 
         renderLatestEventsTable(events, latestEventsTable);
 
-        // Re-apply the last zoom as an example
-        d3.select("#zoom-last-hour-option").dispatch('click');
+        // Restore zoom/pan state
+        svg.call(zoomBehavior.transform, currentTransform);
     };
 
-    setupEditControls(editPanel, refreshDataAndRedraw);
+    setupEditControls(editPanel, refreshDataAndRedraw, svg, zoomBehavior);
 
     // Initial zoom
     d3.select("#zoom-last-hour-option").dispatch('click');
@@ -701,12 +716,24 @@ function setupPanelDragging(...panels) {
     });
 }
 
-function setupEditControls(editPanel, onSaveCallback) {
-    d3.select("#edit-cancel-button").on("click", () => {
+function setupEditControls(editPanel, onSaveCallback, svg, zoomBehavior) {
+    const splitButton = d3.select("#edit-split-button");
+    const cancelButton = d3.select("#edit-cancel-button");
+    const saveButton = d3.select("#edit-save-button");
+    const deleteButton = d3.select("#edit-delete-button");
+
+    const resetEditPanel = () => {
         editPanel.style("display", "none");
+        editPanel.property("isSplitMode", false);
+        splitButton.property("disabled", false);
+        editPanel.selectAll(".split-mode-field").remove();
+    };
+
+    cancelButton.on("click", () => {
+        resetEditPanel();
     });
 
-    d3.select("#edit-delete-button").on("click", async () => {
+    deleteButton.on("click", async () => {
         const originalEvent = editPanel.property("originalEvent");
         if (!originalEvent || !confirm(`Are you sure you want to delete event ${originalEvent.id}?`)) return;
 
@@ -716,6 +743,7 @@ function setupEditControls(editPanel, onSaveCallback) {
 
             console.log(`Event ${originalEvent.id} deleted successfully.`);
             alert('Event deleted successfully!');
+            resetEditPanel();
             onSaveCallback();
         } catch (error) {
             console.error(`Failed to delete event ${originalEvent.id}:`, error);
@@ -723,112 +751,119 @@ function setupEditControls(editPanel, onSaveCallback) {
         }
     });
 
-    d3.select("#edit-split-button").on("click", async () => {
+    splitButton.on("click", () => {
         const originalEvent = editPanel.property("originalEvent");
-        if (!originalEvent || !confirm(`Are you sure you want to split event ${originalEvent.id} into two?`)) return;
+        if (!originalEvent) return;
 
-        const halfDuration = originalEvent.duration / 2;
-        if (halfDuration < 1) {
-            return alert("Event is too short to be split.");
-        }
+        splitButton.property("disabled", true);
+        editPanel.property("isSplitMode", true);
+        renderEventEditPanel(originalEvent, d3.select("#edit-event-data-table"), true);
 
-        const firstEvent = {
-            timestamp: originalEvent.timestamp.toISOString(),
-            duration: halfDuration,
-            data: { ...originalEvent.data }
-        };
-
-        const secondEventStartTime = new Date(originalEvent.timestamp.getTime() + halfDuration * 1000);
-        const secondEvent = {
-            timestamp: secondEventStartTime.toISOString(),
-            duration: halfDuration,
-            data: { ...originalEvent.data }
-        };
-
-        try {
-            // 1. Create the two new events
-            const createPromises = [
-                fetch(`http://localhost:5600/api/0/buckets/${originalEvent.bucket}/events`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(firstEvent)
-                }),
-                fetch(`http://localhost:5600/api/0/buckets/${originalEvent.bucket}/events`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(secondEvent)
-                })
-            ];
-
-            const createResponses = await Promise.all(createPromises);
-
-            for (const response of createResponses) {
-                if (!response.ok) {
-                    throw new Error(`HTTP error creating new event! status: ${response.status}`);
-                }
-            }
-            console.log('Both new events created successfully.');
-
-            // 2. If creation was successful, delete the old event
-            const deleteResponse = await fetch(`http://localhost:5600/api/0/buckets/${originalEvent.bucket}/events/${originalEvent.id}`, {
-                method: 'DELETE'
-            });
-            if (!deleteResponse.ok) {
-                throw new Error(`HTTP error deleting old event! status: ${deleteResponse.status}`);
-            }
-            console.log(`Old event ${originalEvent.id} deleted successfully.`);
-
-            alert('Event split successfully!');
-            editPanel.style("display", "none");
-            onSaveCallback();
-
-        } catch (error) {
-            console.error('Failed to split event:', error);
-            alert('Failed to split event. Please check console for details.');
-        }
+        // Synchronize Start Time 2 with End Time 1
+        d3.select("#edit-end-time-input").on("change", function() {
+            d3.select("#edit-start-time-2-input").property("value", this.value);
+        });
     });
 
-    d3.select("#edit-save-button").on("click", async (e) => {
+    saveButton.on("click", async (e) => {
         e.preventDefault();
         const originalEvent = editPanel.property("originalEvent");
         if (!originalEvent) return alert("No event data to save.");
 
-        const newTitle = d3.select("#edit-title-input").property("value");
-        const newStartTime = new Date(d3.select("#edit-start-time-input").property("value"));
-        const newEndTime = new Date(d3.select("#edit-end-time-input").property("value"));
-        const newDuration = (newEndTime.getTime() - newStartTime.getTime()) / 1000;
+        const isSplitMode = editPanel.property("isSplitMode");
 
-        if (newDuration < 0) return alert('End time cannot be before start time.');
-
-        const newEvent = {
-            timestamp: newStartTime.toISOString(),
-            duration: newDuration,
-            data: { ...originalEvent.data, label: newTitle }
-        };
+        let currentTransform;
+        if (svg && zoomBehavior) {
+            currentTransform = d3.zoomTransform(svg.node());
+        }
 
         try {
-            // Create the new event first
-            const createResponse = await fetch(`http://localhost:5600/api/0/buckets/${originalEvent.bucket}/events`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(newEvent)
-            });
-            if (!createResponse.ok) throw new Error(`HTTP error creating event! status: ${createResponse.status}`);
-            console.log('New event created successfully:', await createResponse.json());
+            if (isSplitMode) {
+                const title1 = d3.select("#edit-title-input").property("value");
+                const startTime1 = new Date(d3.select("#edit-start-time-input").property("value"));
+                const endTime1 = new Date(d3.select("#edit-end-time-input").property("value"));
+                const duration1 = (endTime1.getTime() - startTime1.getTime()) / 1000;
 
-            // Then delete the old event
+                const title2 = d3.select("#edit-title-2-input").property("value");
+                const startTime2 = new Date(d3.select("#edit-start-time-2-input").property("value"));
+                const endTime2 = new Date(d3.select("#edit-end-time-2-input").property("value"));
+                const duration2 = (endTime2.getTime() - startTime2.getTime()) / 1000;
+
+                if (duration1 < 0 || duration2 < 0) return alert('End time cannot be before start time for either event.');
+
+                const firstEvent = {
+                    timestamp: startTime1.toISOString(),
+                    duration: duration1,
+                    data: { ...originalEvent.data, label: title1 }
+                };
+
+                const secondEvent = {
+                    timestamp: startTime2.toISOString(),
+                    duration: duration2,
+                    data: { ...originalEvent.data, label: title2 }
+                };
+
+                const createPromises = [
+                    fetch(`http://localhost:5600/api/0/buckets/${originalEvent.bucket}/events`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(firstEvent)
+                    }),
+                    fetch(`http://localhost:5600/api/0/buckets/${originalEvent.bucket}/events`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(secondEvent)
+                    })
+                ];
+
+                const createResponses = await Promise.all(createPromises);
+
+                for (const response of createResponses) {
+                    if (!response.ok) {
+                        throw new Error(`HTTP error creating new event! status: ${response.status}`);
+                    }
+                }
+                console.log('Both new events created successfully.');
+
+            } else {
+                const newTitle = d3.select("#edit-title-input").property("value");
+                const newStartTime = new Date(d3.select("#edit-start-time-input").property("value"));
+                const newEndTime = new Date(d3.select("#edit-end-time-input").property("value"));
+                const newDuration = (newEndTime.getTime() - newStartTime.getTime()) / 1000;
+
+                if (newDuration < 0) return alert('End time cannot be before start time.');
+
+                const newEvent = {
+                    timestamp: newStartTime.toISOString(),
+                    duration: newDuration,
+                    data: { ...originalEvent.data, label: newTitle }
+                };
+
+                const createResponse = await fetch(`http://localhost:5600/api/0/buckets/${originalEvent.bucket}/events`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(newEvent)
+                });
+                if (!createResponse.ok) throw new Error(`HTTP error creating event! status: ${createResponse.status}`);
+                console.log('New event created successfully:', await createResponse.json());
+            }
+
+            // Delete the old event
             const deleteResponse = await fetch(`http://localhost:5600/api/0/buckets/${originalEvent.bucket}/events/${originalEvent.id}`, {
                 method: 'DELETE'
             });
             if (!deleteResponse.ok) {
-                // Note: At this point, the new event is created but the old one failed to delete.
-                // This is better than losing data. A more robust solution might involve a transaction or cleanup mechanism.
                 throw new Error(`HTTP error deleting old event! status: ${deleteResponse.status}`);
             }
             console.log(`Old event ${originalEvent.id} deleted successfully.`);
 
-            editPanel.style("display", "none");
-            onSaveCallback();
+            alert('Event updated successfully!');
+            resetEditPanel();
+            await onSaveCallback(); // This will re-fetch and re-render, restoring zoom
+
+            if (currentTransform && svg && zoomBehavior) {
+                svg.call(zoomBehavior.transform, currentTransform);
+            }
 
         } catch (error) {
             console.error('Failed to update event:', error);
