@@ -723,6 +723,71 @@ function setupEditControls(editPanel, onSaveCallback) {
         }
     });
 
+    d3.select("#edit-split-button").on("click", async () => {
+        const originalEvent = editPanel.property("originalEvent");
+        if (!originalEvent || !confirm(`Are you sure you want to split event ${originalEvent.id} into two?`)) return;
+
+        const halfDuration = originalEvent.duration / 2;
+        if (halfDuration < 1) {
+            return alert("Event is too short to be split.");
+        }
+
+        const firstEvent = {
+            timestamp: originalEvent.timestamp.toISOString(),
+            duration: halfDuration,
+            data: { ...originalEvent.data }
+        };
+
+        const secondEventStartTime = new Date(originalEvent.timestamp.getTime() + halfDuration * 1000);
+        const secondEvent = {
+            timestamp: secondEventStartTime.toISOString(),
+            duration: halfDuration,
+            data: { ...originalEvent.data }
+        };
+
+        try {
+            // 1. Create the two new events
+            const createPromises = [
+                fetch(`http://localhost:5600/api/0/buckets/${originalEvent.bucket}/events`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(firstEvent)
+                }),
+                fetch(`http://localhost:5600/api/0/buckets/${originalEvent.bucket}/events`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(secondEvent)
+                })
+            ];
+
+            const createResponses = await Promise.all(createPromises);
+
+            for (const response of createResponses) {
+                if (!response.ok) {
+                    throw new Error(`HTTP error creating new event! status: ${response.status}`);
+                }
+            }
+            console.log('Both new events created successfully.');
+
+            // 2. If creation was successful, delete the old event
+            const deleteResponse = await fetch(`http://localhost:5600/api/0/buckets/${originalEvent.bucket}/events/${originalEvent.id}`, {
+                method: 'DELETE'
+            });
+            if (!deleteResponse.ok) {
+                throw new Error(`HTTP error deleting old event! status: ${deleteResponse.status}`);
+            }
+            console.log(`Old event ${originalEvent.id} deleted successfully.`);
+
+            alert('Event split successfully!');
+            editPanel.style("display", "none");
+            onSaveCallback();
+
+        } catch (error) {
+            console.error('Failed to split event:', error);
+            alert('Failed to split event. Please check console for details.');
+        }
+    });
+
     d3.select("#edit-save-button").on("click", async (e) => {
         e.preventDefault();
         const originalEvent = editPanel.property("originalEvent");
