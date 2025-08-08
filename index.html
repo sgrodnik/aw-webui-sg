@@ -1,10 +1,10 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html lang="en">
 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Таймлайн ActivityWatch</title>
+    <title>AW UI</title>
     <link rel="stylesheet" href="style.css">
     <script src="https://d3js.org/d3.v7.min.js"></script>
     <script src="script.js"></script>
@@ -21,21 +21,21 @@
     </div>
 
     <div id="zoom-panel">
-        <h2>Масштабирование</h2>
+        <h2>Zoom</h2>
         <div class="zoom-option" id="zoom-last-hour-option">
-            <span>Показать последние </span>
+            <span>Show last </span>
             <input type="number" id="zoom-last-hour-input" value="1" min="1" max="99">
-            <span> часов</span>
+            <span> hours</span>
         </div>
         <div class="zoom-option" id="zoom-last-day-option">
-            <span>Показать </span>
+            <span>Show </span>
             <input type="number" id="zoom-last-day-input" value="1" min="1" max="99">
-            <span> последних суток</span>
+            <span> last days</span>
         </div>
         <div class="zoom-option" id="zoom-to-morning-option">
-            <span>Показать с </span>
+            <span>Show from </span>
             <input type="number" id="zoom-to-morning-input" value="8" min="0" max="23">
-            <span> часов утра</span>
+            <span> o'clock</span>
         </div>
     </div>
 
@@ -43,9 +43,9 @@
         <table id="latest-events-table">
             <thead>
                 <tr>
-                    <th>Время</th>
-                    <th>Длительность</th>
-                    <th>Событие</th>
+                    <th>Time</th>
+                    <th>Duration</th>
+                    <th>Description</th>
                 </tr>
             </thead>
             <tbody>
@@ -55,17 +55,17 @@
     </div>
 
     <div id="event-info-panel" class="draggable-panel">
-        <h2>Информация о событии</h2>
-        <div id="event-data-table">Наведите курсор на точку на таймлайне.</div>
+        <h2>Info</h2>
+        <div id="event-data-table">Hover over a point on the timeline.</div>
     </div>
 
     <div id="event-edit-panel" class="draggable-panel" style="display: none;">
-        <h2>Редактировать событие</h2>
+        <h2>Edit</h2>
         <div id="edit-event-data-table"></div>
         <div class="button-group">
-            <button type="button" class="cancel" id="edit-cancel-button">Отмена</button>
-            <button type="submit" class="save" id="edit-save-button">Сохранить</button>
-            <button type="button" class="delete" id="edit-delete-button">Удалить</button>
+            <button type="button" class="cancel" id="edit-cancel-button">Cancel</button>
+            <button type="submit" class="save" id="edit-save-button">Save</button>
+            <button type="button" class="delete" id="edit-delete-button">Delete</button>
         </div>
     </div>
 

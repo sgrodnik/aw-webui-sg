@@ -170,25 +170,25 @@ function formatRelativeTime(date, now = new Date()) {
     const sign = sec < 0 ? "-" : "";
     const seconds = Math.abs(sec);
 
-    if (seconds < 60) return `${sign}${seconds}с `;
+    if (seconds < 60) return `${sign}${seconds}s `;
 
     const minutes = Math.floor(seconds / 60);
-    if (minutes < 60) return `${sign}${minutes}м `;
+    if (minutes < 60) return `${sign}${minutes}m `;
 
     const hours = Math.floor(minutes / 60);
-    if (hours < 24) return `${sign}${hours}ч ${minutes % 60}м `.replaceAll(" 0м", "");
+    if (hours < 24) return `${sign}${hours}h ${minutes % 60}m `.replaceAll(" 0m", "");
 
     const days = Math.floor(minutes / (60 * 24));
-    if (days < 30) return `${sign}${days}д ${hours % 24}ч `.replaceAll(" 0ч", "");
+    if (days < 30) return `${sign}${days}d ${hours % 24}h `.replaceAll(" 0h", "");
 
     const months = Math.floor(days / 30);
-    if (months < 12) return `${sign}${months}М ${days % 30}д `.replaceAll(" 0д", "");
+    if (months < 12) return `${sign}${months}M ${days % 30}d `.replaceAll(" 0d", "");
 
     const years = Math.floor(months / 12);
-    return `${sign}${years}г ${months % 12}М `;
+    return `${sign}${years}y ${months % 12}M `;
 }
 
-const shortMonthNames = ["янв", "фев", "мар", "апр", "май", "июн", "июл", "авг", "сен", "окт", "ноя", "дек"];
+const shortMonthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
 /**
  * Formats a date into a 24-hour absolute time string, adapting based on the visible time range.
@@ -236,9 +236,9 @@ function formatDuration(seconds, includeSeconds = true) {
     const remainingSeconds = Math.floor(seconds % 60);
 
     let result = "";
-    if (hours > 0) result += hours + "ч ";
-    if (minutes > 0) result += minutes + "м ";
-    if (includeSeconds) result += remainingSeconds + "с";
+    if (hours > 0) result += hours + "h ";
+    if (minutes > 0) result += minutes + "m ";
+    if (includeSeconds) result += remainingSeconds + "s";
 
     return result.trim();
 }
@@ -251,7 +251,7 @@ function renderEventTable(eventData, container) {
 
     tbody.append("tr").html(`<td>Bucket:</td><td>${eventData.bucket}</td>`);
     tbody.append("tr").html(`<td>ID:</td><td>${eventData.id}</td>`);
-    tbody.append("tr").html(`<td>Time:</td><td>${eventData.timestamp.toLocaleString('ru-RU')}</td>`);
+    tbody.append("tr").html(`<td>Time:</td><td>${eventData.timestamp.toLocaleString('en-US')}</td>`);
 
     let displayedDuration;
     if (eventData.duration > 900) { // 15 minutes = 900 seconds
@@ -288,7 +288,7 @@ function renderLatestEventsTable(events, container) {
 
     latestEvents.forEach(event => {
         const row = container.select("tbody").append("tr");
-        row.append("td").text(event.timestamp.toLocaleString('ru-RU'));
+        row.append("td").text(event.timestamp.toLocaleString('en-US'));
         const status = event.data.running ? " ⏳" : "";
         row.append("td").text(formatDuration(event.duration) + status);
         row.append("td").text(`${event.data.label || event.data.status || "N/A"}`);
