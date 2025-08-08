@@ -10,7 +10,7 @@ const TIMELINE_CONTAINER_SELECTOR = ".timeline-container";
 const INFO_PANEL_SELECTOR = "#event-info-panel";
 const EDIT_PANEL_SELECTOR = "#event-edit-panel";
 const EVENT_DATA_SELECTOR = "#event-data-table";
-const EVENT_SEGMENT_CLASS = "event-segment-group"; // Changed class name
+const EVENT_SEGMENT_CLASS = "event-segment-group";
 const DRAG_CURSOR_GRABBING = "grabbing";
 const DRAG_CURSOR_GRAB = "grab";
 
@@ -32,11 +32,11 @@ async function fetchEvents() {
 
             // Add bucket name to each event and process
             const processedEvents = events.map(d => {
-                // Ищем и обновляем текущее событие
+                // Find and update the current running event
                 if (d.data.running === true && d.duration === 0) {
                     const now = new Date();
                     const eventTimestamp = new Date(d.timestamp);
-                    d.duration = (now - eventTimestamp) / 1000; // Длительность в секундах
+                    d.duration = (now - eventTimestamp) / 1000; // Duration in seconds
                 }
                 return {
                     ...d,
@@ -47,12 +47,12 @@ async function fetchEvents() {
             allEvents.push(...processedEvents);
 
         } catch (error) {
-            console.error(`Не удалось получить данные для бакета ${bucketName}:`, error);
+            console.error(`Failed to fetch data for bucket ${bucketName}:`, error);
         }
     }
 
     if (allEvents.length === 0) {
-        console.warn("API вернуло пустой список событий.");
+        console.warn("API returned an empty list of events.");
     }
 
     return allEvents;
@@ -82,7 +82,7 @@ function setupChart(events, width, height) {
     const yScale = d3.scalePoint()
         .domain(uniqueBuckets)
         .range([height - 50, 50]) // Adjust range to give space for labels and axes
-        .padding(0.5); // Add some padding between bands
+        .padding(0.5);
 
     const xAxis = d3.axisBottom(xScale);
     const xAxisGroup = g.append("g")
@@ -91,31 +91,16 @@ function setupChart(events, width, height) {
         .call(xAxis);
 
     const xAxisTop = d3.axisTop(xScale)
-        .tickValues(generateRelativeTimeTicks(xScale, width)) // Используем новую функцию для генерации тиков
-        .tickFormat(d => formatRelativeTime(d)); // Используем новую функцию для форматирования
+        .tickValues(generateRelativeTimeTicks(xScale, width)) // Use new function to generate ticks
+        .tickFormat(d => formatRelativeTime(d)); // Use new function to format
     const xAxisTopGroup = g.append("g")
         .attr("class", "x-axis-top")
-        .attr("transform", `translate(0, 20)`) // Размещаем сверху
+        .attr("transform", `translate(0, 20)`) // Place at the top
         .call(xAxisTop);
 
-    return { svg, g, xScale, yScale, xAxisGroup, xAxisTopGroup, timeExtent }; // Return timeExtent
+    return { svg, g, xScale, yScale, xAxisGroup, xAxisTopGroup, timeExtent };
 }
 
-/**
- * Sets up drag-and-drop functionality for the info panel.
- * @param {d3.Selection} infoPanel - The D3 selection for the info panel.
- */
-/**
- * Renders event data as a table inside the specified container.
- * @param {Object} eventData - The event object containing data to display.
- * @param {d3.Selection} container - The D3 selection for the container to render the table into.
- */
-/**
- * Formats a date into a relative time string (e.g., "1 мин назад", "1 час 1 мин назад").
- * @param {Date} date - The date to format.
- * @param {Date} now - The current reference date (defaults to current time).
- * @returns {string} The relative time string.
- */
 /**
  * Generates an array of "smart" relative time ticks based on the current time scale and width.
  * The ticks are rounded to sensible intervals (minutes, hours, days) relative to 'now'.
@@ -126,7 +111,7 @@ function setupChart(events, width, height) {
  */
 function generateRelativeTimeTicks(currentXScale, width, now = new Date()) {
     const domain = currentXScale.domain();
-    const visibleDurationMs = domain[1].getTime() - domain[0].getTime(); // Duration of the visible range in milliseconds
+    const visibleDurationMs = domain[1].getTime() - domain[0].getTime();
 
     let tickInterval;
     let tickStep;
@@ -134,30 +119,26 @@ function generateRelativeTimeTicks(currentXScale, width, now = new Date()) {
     // Determine the appropriate tick interval based on the visible duration
     if (visibleDurationMs < 2 * 60 * 60 * 1000) { // Less than 2 hours
         tickInterval = d3.timeMinute;
-        tickStep = 5; // 5-minute intervals
-        if (visibleDurationMs < 30 * 60 * 1000) tickStep = 1; // 1-minute intervals for very short durations
-        else if (visibleDurationMs < 60 * 60 * 1000) tickStep = 5; // 5-minute intervals for less than an hour
-        else tickStep = 10; // 10-minute intervals for up to 2 hours
+        if (visibleDurationMs < 30 * 60 * 1000) tickStep = 1;
+        else if (visibleDurationMs < 60 * 60 * 1000) tickStep = 5;
+        else tickStep = 10;
     } else if (visibleDurationMs < 2 * 24 * 60 * 60 * 1000) { // Less than 2 days
         tickInterval = d3.timeHour;
-        tickStep = 1; // 1-hour intervals
-        if (visibleDurationMs > 12 * 60 * 60 * 1000) tickStep = 3; // 3-hour intervals for longer durations
+        tickStep = 1;
+        if (visibleDurationMs > 12 * 60 * 60 * 1000) tickStep = 3;
     } else { // More than 2 days
         tickInterval = d3.timeDay;
-        tickStep = 1; // 1-day intervals
-        if (visibleDurationMs > 7 * 24 * 60 * 60 * 1000) tickStep = 7; // 7-day intervals for longer durations
+        tickStep = 1;
+        if (visibleDurationMs > 7 * 24 * 60 * 60 * 1000) tickStep = 7;
     }
 
-    // Generate ticks relative to 'now'
     const ticks = [];
-    let currentTick = tickInterval.offset(now, 0); // Start at 'now' or nearest interval
+    let currentTick = tickInterval.offset(now, 0);
 
-    // Adjust currentTick to be a multiple of tickStep relative to 'now'
     const nowMs = now.getTime();
     const currentTickMs = currentTick.getTime();
-    const intervalMs = tickInterval.offset(now, tickStep).getTime() - nowMs; // Duration of one step
+    const intervalMs = tickInterval.offset(now, tickStep).getTime() - nowMs;
 
-    // Calculate the offset from 'now' to the nearest 'round' tick
     const offsetFromNow = (nowMs - currentTickMs) % intervalMs;
     currentTick = new Date(currentTickMs + offsetFromNow);
 
@@ -178,7 +159,7 @@ function generateRelativeTimeTicks(currentXScale, width, now = new Date()) {
 }
 
 /**
- * Formats a date into a relative time string (e.g., "1 мин назад", "1 час 1 мин назад").
+ * Formats a date into a relative time string (e.g., "1m ago", "1h 1m ago").
  * @param {Date} date - The date to format.
  * @param {Date} now - The current reference date (defaults to current time).
  * @returns {string} The relative time string.
@@ -225,10 +206,9 @@ function renderEventTable(eventData, container) {
     const table = container.append("table").attr("class", "event-attributes-table");
     const tbody = table.append("tbody");
 
-    // Add basic event info
-    tbody.append("tr").html(`<td>Бакет:</td><td>${eventData.bucket}</td>`); // Add bucket name
+    tbody.append("tr").html(`<td>Bucket:</td><td>${eventData.bucket}</td>`);
     tbody.append("tr").html(`<td>ID:</td><td>${eventData.id}</td>`);
-    tbody.append("tr").html(`<td>Время:</td><td>${eventData.timestamp.toLocaleString()}</td>`);
+    tbody.append("tr").html(`<td>Time:</td><td>${eventData.timestamp.toLocaleString()}</td>`);
 
     let displayedDuration;
     if (eventData.duration > 900) { // 15 minutes = 900 seconds
@@ -236,7 +216,7 @@ function renderEventTable(eventData, container) {
     } else {
         displayedDuration = formatDuration(eventData.duration);
     }
-    tbody.append("tr").html(`<td>Длительность:</td><td><span title="${eventData.duration.toFixed(2)} с.">${displayedDuration}</span></td>`);
+    tbody.append("tr").html(`<td>Duration:</td><td><span title="${eventData.duration.toFixed(2)} s">${displayedDuration}</span></td>`);
 
     // Add data attributes
     if (eventData.data) {
@@ -276,9 +256,9 @@ function setupInfoPanelDrag(infoPanel) {
     let isDragging = false;
     let initialMouseX, initialMouseY;
     let initialPanelTop;
-    let initialPanelLeft; // New variable for left position
-    let initialPanelRight; // Keep for right position
-    let isPositionedByLeft = false; // Flag to determine positioning
+    let initialPanelLeft;
+    let initialPanelRight;
+    let isPositionedByLeft = false;
 
     infoPanel.on("mousedown", (event) => {
         // Prevent dragging if the click target is an input, button, or label
@@ -346,11 +326,11 @@ function setupInfoPanelDrag(infoPanel) {
  */
 function renderEventPoints(events, xScale, yScale, g, infoPanel, editPanel, dataPre) {
     const BAR_HEIGHT = 10;
-    const POINT_SIZE = 1; // 1x1 pixel for the points
+    const POINT_SIZE = 1;
 
     const segments = g.selectAll(`.${EVENT_SEGMENT_CLASS}`)
         .data(events)
-        .enter().append("g") // Append a group for each event
+        .enter().append("g")
         .attr("class", d => {
             let classes = [EVENT_SEGMENT_CLASS];
             if (d.data.running) {
@@ -365,23 +345,23 @@ function renderEventPoints(events, xScale, yScale, g, infoPanel, editPanel, data
             }
             return classes.join(" ");
         })
-        .attr("transform", d => `translate(${xScale(d.timestamp)}, ${yScale(d.bucket) - BAR_HEIGHT / 2})`) // Translate the group
+        .attr("transform", d => `translate(${xScale(d.timestamp)}, ${yScale(d.bucket) - BAR_HEIGHT / 2})`)
         .on("mouseover", (event, d) => {
             infoPanel.style("display", "block");
             renderEventTable(d, dataPre);
         })
         .on("click", (event, d) => {
             if (d.bucket === 'aw-stopwatch') {
-                editPanel.style("display", "block"); // Show edit panel
+                editPanel.style("display", "block");
                 renderEventEditPanel(d, d3.select("#edit-event-data-table"));
-                editPanel.property("originalEvent", d); // Store original event data for saving
+                editPanel.property("originalEvent", d);
             }
         });
 
-    segments.append("rect") // Main event body
+    segments.append("rect")
         .attr("class", "event-body")
-        .attr("x", 0) // Relative to group's transform
-        .attr("y", 0) // Relative to group's transform
+        .attr("x", 0)
+        .attr("y", 0)
         .attr("width", d => {
             const startTime = d.timestamp.getTime();
             const endTime = startTime + d.duration * 1000;
@@ -389,21 +369,21 @@ function renderEventPoints(events, xScale, yScale, g, infoPanel, editPanel, data
         })
         .attr("height", BAR_HEIGHT);
 
-    segments.append("rect") // Start point (top-left)
+    segments.append("rect")
         .attr("class", "event-start-point")
         .attr("x", 0)
-        .attr("y", -POINT_SIZE) // 1 pixel above the top edge
+        .attr("y", -POINT_SIZE)
         .attr("width", POINT_SIZE)
         .attr("height", POINT_SIZE);
 
-    segments.append("rect") // End point (bottom-right)
+    segments.append("rect")
         .attr("class", "event-end-point")
         .attr("x", d => {
             const startTime = d.timestamp.getTime();
             const endTime = startTime + d.duration * 1000;
-            return (xScale(new Date(endTime)) - xScale(d.timestamp)) - POINT_SIZE; // 1 pixel from the right edge
+            return (xScale(new Date(endTime)) - xScale(d.timestamp)) - POINT_SIZE;
         })
-        .attr("y", BAR_HEIGHT) // 1 pixel below the bottom edge
+        .attr("y", BAR_HEIGHT)
         .attr("width", POINT_SIZE)
         .attr("height", POINT_SIZE);
 
@@ -442,7 +422,7 @@ function setupEscapeListener(infoPanel, editPanel, zoomPanel) {
  * @param {number} width - The width of the SVG container.
  * @param {d3.ZoomBehavior<SVGSVGElement>} zoomBehavior - The D3 zoom behavior.
  */
-function zoomToRange(startDate, endDate, svg, originalXScale, yScale, xAxisGroup, segments, width, zoomBehavior) {
+function zoomToRange(startDate, endDate, svg, originalXScale, xAxisGroup, segments, width, zoomBehavior) {
     const start = new Date(startDate);
     const end = new Date(endDate);
 
@@ -507,31 +487,24 @@ function setupZoom(svg, xScale, yScale, xAxisGroup, xAxisTopGroup, segments, tim
 }
 
 function renderEventEditPanel(eventData, container) {
-    container.html(""); // Clear previous content
+    container.html("");
 
     const table = container.append("table").attr("class", "event-attributes-table");
     const tbody = table.append("tbody");
 
-    // ID события (только для чтения)
     tbody.append("tr").html(`<td>ID:</td><td><input type="text" value="${eventData.id}" readonly></td>`);
-    // Бакет (только для чтения)
-    tbody.append("tr").html(`<td>Бакет:</td><td><input type="text" value="${eventData.bucket}" readonly></td>`);
+    tbody.append("tr").html(`<td>Bucket:</td><td><input type="text" value="${eventData.bucket}" readonly></td>`);
+    tbody.append("tr").html(`<td>Title:</td><td><input type="text" id="edit-title-input" value="${eventData.data.label || ''}"></td>`);
 
-    // Заголовок (редактируемый)
-    tbody.append("tr").html(`<td>Заголовок:</td><td><input type="text" id="edit-title-input" value="${eventData.data.label || ''}"></td>`);
-
-    // Время начала (редактируемое текстовое поле)
     const startTime = eventData.timestamp;
     const endTime = new Date(startTime.getTime() + eventData.duration * 1000);
 
-    tbody.append("tr").html(`<td>Время начала:</td><td><input type="text" id="edit-start-time-input" value="${startTime.toLocaleString()}"></td>`);
-    // Время окончания (редактируемое текстовое поле)
-    tbody.append("tr").html(`<td>Время окончания:</td><td><input type="text" id="edit-end-time-input" value="${endTime.toLocaleString()}"></td>`);
+    tbody.append("tr").html(`<td>Start Time:</td><td><input type="text" id="edit-start-time-input" value="${startTime.toLocaleString()}"></td>`);
+    tbody.append("tr").html(`<td>End Time:</td><td><input type="text" id="edit-end-time-input" value="${endTime.toLocaleString()}"></td>`);
 
-    // Добавляем остальные атрибуты данных, если они есть, как только для чтения
     if (eventData.data) {
         for (const key in eventData.data) {
-            if (eventData.data.hasOwnProperty(key) && key !== 'label') { // Исключаем 'label', так как он уже есть как "Заголовок"
+            if (eventData.data.hasOwnProperty(key) && key !== 'label') {
                 let value = eventData.data[key];
                 if (typeof value === 'object' && value !== null) {
                     value = JSON.stringify(value, null, 2);
@@ -544,20 +517,15 @@ function renderEventEditPanel(eventData, container) {
     }
 }
 
-document.addEventListener('DOMContentLoaded', async () => {
-    // Load saved position and values
+// --- Main Application Setup ---
+async function main() {
     const zoomPanel = d3.select("#zoom-panel");
-    const savedZoomPanelPosition = localStorage.getItem('zoomPanelPosition');
-    if (savedZoomPanelPosition) {
-        const { top, left } = JSON.parse(savedZoomPanelPosition);
-        zoomPanel.style("top", top);
-        zoomPanel.style("left", left);
-    }
+    loadPanelPosition(zoomPanel, 'zoomPanelPosition');
     zoomPanel.style("visibility", "visible");
 
-    const events = await fetchEvents();
+    let events = await fetchEvents();
     if (events.length === 0) {
-        document.body.innerHTML += "<p>Данные не найдены.</p>";
+        document.body.innerHTML += "<p>No data found.</p>";
         return;
     }
 
@@ -565,141 +533,147 @@ document.addEventListener('DOMContentLoaded', async () => {
     const width = container.node().clientWidth;
     const height = container.node().clientHeight;
 
-    const { svg, g, xScale, yScale, xAxisGroup, xAxisTopGroup, timeExtent } = setupChart(events, width, height);
+    let { svg, g, xScale, yScale, xAxisGroup, xAxisTopGroup, timeExtent } = setupChart(events, width, height);
     const infoPanel = d3.select(INFO_PANEL_SELECTOR);
     const editPanel = d3.select(EDIT_PANEL_SELECTOR);
     const dataPre = d3.select(EVENT_DATA_SELECTOR);
 
-    const segments = renderEventPoints(events, xScale, yScale, g, infoPanel, editPanel, dataPre);
+    let segments = renderEventPoints(events, xScale, yScale, g, infoPanel, editPanel, dataPre);
+    let zoomBehavior = setupZoom(svg, xScale, yScale, xAxisGroup, xAxisTopGroup, segments, timeExtent, width);
 
-    const zoomBehavior = setupZoom(svg, xScale, yScale, xAxisGroup, xAxisTopGroup, segments, timeExtent, width); // Pass yScale
+    const latestEventsTable = d3.select("#latest-events-table");
+    renderLatestEventsTable(events, latestEventsTable);
 
-    const zoomLastHourInput = d3.select("#zoom-last-hour-input");
-    const savedLastHourValue = localStorage.getItem('zoomLastHourValue');
-    if (savedLastHourValue) zoomLastHourInput.property("value", savedLastHourValue);
+    // --- UI Interactions Setup ---
+    setupZoomControls(svg, xScale, xAxisGroup, segments, width, zoomBehavior);
+    setupPanelDragging(infoPanel, editPanel, zoomPanel);
+    setupEscapeListener(infoPanel, editPanel, zoomPanel);
 
-    const zoomLastDayInput = d3.select("#zoom-last-day-input");
-    const savedLastDayValue = localStorage.getItem('zoomLastDayValue');
-    if (savedLastDayValue) zoomLastDayInput.property("value", savedLastDayValue);
+    // --- Refresh Function ---
+    const refreshDataAndRedraw = async () => {
+        events = await fetchEvents();
 
-    const zoomToMorningInput = d3.select("#zoom-to-morning-input");
-    const savedToMorningValue = localStorage.getItem('zoomToMorningValue');
-    if (savedToMorningValue) zoomToMorningInput.property("value", savedToMorningValue);
+        // Clear previous chart elements
+        g.selectAll("*").remove();
 
-    // Function to save panel position
-    function saveZoomPanelPosition() {
-        const computedStyle = window.getComputedStyle(zoomPanel.node());
-        const top = computedStyle.top;
-        const left = computedStyle.left;
-        localStorage.setItem('zoomPanelPosition', JSON.stringify({ top, left }));
+        // Re-setup chart with new data
+        const newChart = setupChart(events, width, height);
+        xScale = newChart.xScale;
+        yScale = newChart.yScale;
+        xAxisGroup = newChart.xAxisGroup;
+        xAxisTopGroup = newChart.xAxisTopGroup;
+        timeExtent = newChart.timeExtent;
+        g = newChart.g; // Re-assign g from the new setup
+
+        // Re-render points and setup zoom
+        segments = renderEventPoints(events, xScale, yScale, g, infoPanel, editPanel, dataPre);
+        zoomBehavior = setupZoom(svg, xScale, yScale, xAxisGroup, xAxisTopGroup, segments, timeExtent, width);
+
+        renderLatestEventsTable(events, latestEventsTable);
+
+        // Re-apply the last zoom as an example
+        d3.select("#zoom-last-hour-option").dispatch('click');
+    };
+
+    setupEditControls(editPanel, refreshDataAndRedraw);
+
+    // Initial zoom
+    d3.select("#zoom-last-hour-option").dispatch('click');
+}
+
+// --- Helper Functions ---
+
+function loadPanelPosition(panel, storageKey) {
+    const savedPosition = localStorage.getItem(storageKey);
+    if (savedPosition) {
+        const { top, left } = JSON.parse(savedPosition);
+        panel.style("top", top).style("left", left);
     }
+}
 
-    // Function to save input values
-    function saveInputValues() {
-        localStorage.setItem('zoomLastHourValue', zoomLastHourInput.property("value"));
-        localStorage.setItem('zoomLastDayValue', zoomLastDayInput.property("value"));
-        localStorage.setItem('zoomToMorningValue', zoomToMorningInput.property("value"));
-    }
+function savePanelPosition(panel, storageKey) {
+    const computedStyle = window.getComputedStyle(panel.node());
+    localStorage.setItem(storageKey, JSON.stringify({ top: computedStyle.top, left: computedStyle.left }));
+}
 
-    // Setup drag for zoom panel
-    setupInfoPanelDrag(zoomPanel);
-    zoomPanel.on("mouseup", saveZoomPanelPosition); // Save position after drag ends
-    zoomLastHourInput.on("change", saveInputValues);
-    zoomLastDayInput.on("change", saveInputValues);
-    zoomToMorningInput.on("change", saveInputValues);
+function setupZoomControls(svg, xScale, xAxisGroup, segments, width, zoomBehavior) {
+    const zoomConfigs = [
+        { id: "last-hour", default: 1, unit: 'hours' },
+        { id: "last-day", default: 1, unit: 'days' },
+        { id: "to-morning", default: 8, unit: 'morning' }
+    ];
 
-    // Function to handle mouse wheel scroll for increment/decrement
+    const inputs = {};
+
+    zoomConfigs.forEach(config => {
+        const input = d3.select(`#zoom-${config.id}-input`);
+        inputs[config.id] = input;
+
+        const savedValue = localStorage.getItem(`zoom-${config.id}-value`);
+        input.property("value", savedValue || config.default);
+
+        input.on("change", () => localStorage.setItem(`zoom-${config.id}-value`, input.property("value")));
+        input.on("wheel", handleWheelScroll);
+
+        d3.select(`#zoom-${config.id}-option`).on("click", () => {
+            const value = parseInt(input.property("value"));
+            let startTime, endTime = new Date();
+
+            if (config.unit === 'hours') {
+                if (isNaN(value) || value < 1 || value > 99) return alert("Please enter a number between 1 and 99 for hours.");
+                startTime = new Date(endTime.getTime() - value * 60 * 60 * 1000);
+            } else if (config.unit === 'days') {
+                if (isNaN(value) || value < 1 || value > 99) return alert("Please enter a number between 1 and 99 for days.");
+                startTime = new Date(endTime.getTime() - value * 24 * 60 * 60 * 1000);
+            } else if (config.unit === 'morning') {
+                const currentHour = endTime.getHours();
+                if (isNaN(value) || value < 0 || value > currentHour) return alert(`Please enter a number between 0 and ${currentHour} for the morning hour.`);
+                startTime = new Date(endTime.getFullYear(), endTime.getMonth(), endTime.getDate(), value, 0, 0, 0);
+            }
+            zoomToRange(startTime, endTime, svg, xScale, xAxisGroup, segments, width, zoomBehavior);
+        });
+    });
+
     function handleWheelScroll(event) {
-        event.preventDefault(); // Prevent default page scroll
-
+        event.preventDefault();
         const input = d3.select(event.currentTarget);
         let value = parseInt(input.property("value"));
         const min = parseInt(input.attr("min"));
         const max = parseInt(input.attr("max"));
 
-        // Determine scroll direction: deltaY < 0 for scroll up (increment), deltaY > 0 for scroll down (decrement)
-        if (event.deltaY < 0) {
-            value = Math.min(value + 1, max); // Increment
-        } else if (event.deltaY > 0) {
-            value = Math.max(value - 1, min); // Decrement
-        }
+        if (event.deltaY < 0) value = Math.min(value + 1, max);
+        else if (event.deltaY > 0) value = Math.max(value - 1, min);
 
         input.property("value", value);
-        saveInputValues(); // Save the new value
-        input.dispatch("change"); // Trigger change event to update display if needed
+        input.dispatch("change");
     }
+}
 
-    // Attach wheel event listeners to input fields
-    zoomLastHourInput.on("wheel", handleWheelScroll);
-    zoomLastDayInput.on("wheel", handleWheelScroll);
-    zoomToMorningInput.on("wheel", handleWheelScroll);
-
-    // Zoom functions
-    d3.select("#zoom-last-hour-option").on("click", () => {
-        const hours = parseInt(zoomLastHourInput.property("value"));
-        if (isNaN(hours) || hours < 1 || hours > 99) {
-            alert("Пожалуйста, введите число от 1 до 99 для часов.");
-            return;
-        }
-        const now = new Date();
-        const startTime = new Date(now.getTime() - hours * 60 * 60 * 1000);
-        zoomToRange(startTime, now, svg, xScale, yScale, xAxisGroup, segments, width, zoomBehavior);
+function setupPanelDragging(...panels) {
+    panels.forEach((panel, i) => {
+        const storageKey = `${panel.attr('id')}Position`;
+        loadPanelPosition(panel, storageKey);
+        setupInfoPanelDrag(panel);
+        panel.on("mouseup", () => savePanelPosition(panel, storageKey));
     });
+}
 
-    d3.select("#zoom-last-day-option").on("click", () => {
-        const days = parseInt(zoomLastDayInput.property("value"));
-        if (isNaN(days) || days < 1 || days > 99) {
-            alert("Пожалуйста, введите число от 1 до 99 для суток.");
-            return;
-        }
-        const now = new Date();
-        const startTime = new Date(now.getTime() - days * 24 * 60 * 60 * 1000);
-        zoomToRange(startTime, now, svg, xScale, yScale, xAxisGroup, segments, width, zoomBehavior);
-    });
-
-    d3.select("#zoom-to-morning-option").on("click", () => {
-        const hour = parseInt(zoomToMorningInput.property("value"));
-        const now = new Date();
-        const currentHour = now.getHours();
-        if (isNaN(hour) || hour < 0 || hour > currentHour) {
-            alert(`Пожалуйста, введите число от 0 до ${currentHour} для часов утра.`);
-            return;
-        }
-        const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate(), hour, 0, 0, 0);
-        zoomToRange(startOfDay, now, svg, xScale, yScale, xAxisGroup, segments, width, zoomBehavior);
-    });
-
-    setupInfoPanelDrag(infoPanel);
-    setupInfoPanelDrag(editPanel); // Make edit panel draggable
-    setupInfoPanelDrag(zoomPanel); // Make zoom panel draggable
-    setupEscapeListener(infoPanel, editPanel, zoomPanel);
-
-    // Handle edit panel buttons
+function setupEditControls(editPanel, onSaveCallback) {
     d3.select("#edit-cancel-button").on("click", () => {
         editPanel.style("display", "none");
     });
 
     d3.select("#edit-delete-button").on("click", async () => {
         const originalEvent = editPanel.property("originalEvent");
-        if (!originalEvent) {
-            alert("No event selected for deletion.");
-            return;
-        }
-
-        if (!confirm(`Are you sure you want to delete event ${originalEvent.id}?`)) {
-            return;
-        }
+        if (!originalEvent || !confirm(`Are you sure you want to delete event ${originalEvent.id}?`)) return;
 
         try {
-            const deleteResponse = await fetch(`http://localhost:5600/api/0/buckets/${originalEvent.bucket}/events/${originalEvent.id}`, {
-                method: 'DELETE'
-            });
-            if (!deleteResponse.ok) {
-                throw new Error(`HTTP error! status: ${deleteResponse.status}`);
-            }
+            const response = await fetch(`http://localhost:5600/api/0/buckets/${originalEvent.bucket}/events/${originalEvent.id}`, { method: 'DELETE' });
+            if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+
             console.log(`Event ${originalEvent.id} deleted successfully.`);
             alert('Event deleted successfully!');
-            location.reload(); // Refresh the page
+            onSaveCallback();
         } catch (error) {
             console.error(`Failed to delete event ${originalEvent.id}:`, error);
             alert('Failed to delete event. Please check console for details.');
@@ -708,72 +682,51 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     d3.select("#edit-save-button").on("click", async (e) => {
         e.preventDefault();
-
         const originalEvent = editPanel.property("originalEvent");
-        if (!originalEvent) {
-            alert("No event data to save.");
-            return;
-        }
+        if (!originalEvent) return alert("No event data to save.");
 
         const newTitle = d3.select("#edit-title-input").property("value");
         const newStartTime = new Date(d3.select("#edit-start-time-input").property("value"));
         const newEndTime = new Date(d3.select("#edit-end-time-input").property("value"));
         const newDuration = (newEndTime.getTime() - newStartTime.getTime()) / 1000;
 
-        if (newDuration < 0) {
-            alert('End time cannot be before start time.');
-            return;
-        }
+        if (newDuration < 0) return alert('End time cannot be before start time.');
 
-        // Delete the old event
+        const newEvent = {
+            timestamp: newStartTime.toISOString(),
+            duration: newDuration,
+            data: { ...originalEvent.data, label: newTitle }
+        };
+
         try {
+            // Create the new event first
+            const createResponse = await fetch(`http://localhost:5600/api/0/buckets/${originalEvent.bucket}/events`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(newEvent)
+            });
+            if (!createResponse.ok) throw new Error(`HTTP error creating event! status: ${createResponse.status}`);
+            console.log('New event created successfully:', await createResponse.json());
+
+            // Then delete the old event
             const deleteResponse = await fetch(`http://localhost:5600/api/0/buckets/${originalEvent.bucket}/events/${originalEvent.id}`, {
                 method: 'DELETE'
             });
             if (!deleteResponse.ok) {
-                throw new Error(`HTTP error! status: ${deleteResponse.status}`);
+                // Note: At this point, the new event is created but the old one failed to delete.
+                // This is better than losing data. A more robust solution might involve a transaction or cleanup mechanism.
+                throw new Error(`HTTP error deleting old event! status: ${deleteResponse.status}`);
             }
-            console.log(`Event ${originalEvent.id} deleted successfully.`);
-        } catch (error) {
-            console.error(`Failed to delete event ${originalEvent.id}:`, error);
-            alert('Failed to delete original event. Please check console for details.');
-            return;
-        }
+            console.log(`Old event ${originalEvent.id} deleted successfully.`);
 
-        // Create a new event
-        const newEvent = {
-            timestamp: newStartTime.toISOString(),
-            duration: newDuration,
-            data: {
-                ...originalEvent.data, // Keep existing data
-                label: newTitle // Update label
-            }
-        };
+            editPanel.style("display", "none");
+            onSaveCallback();
 
-        try {
-            const createResponse = await fetch(`http://localhost:5600/api/0/buckets/${originalEvent.bucket}/events`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(newEvent)
-            });
-            if (!createResponse.ok) {
-                throw new Error(`HTTP error! status: ${createResponse.status}`);
-            }
-            console.log('New event created successfully:', await createResponse.json());
-            // alert('Event updated successfully!');
-            location.reload(); // Refresh the page
         } catch (error) {
-            console.error('Failed to create new event:', error);
-            alert('Failed to create new event. Please check console for details.');
+            console.error('Failed to update event:', error);
+            alert('Failed to update event. Please check console for details.');
         }
     });
+}
 
-    // Render the latest events table
-    const latestEventsTable = d3.select("#latest-events-table");
-    renderLatestEventsTable(events, latestEventsTable);
-
-    // Автоматически масштабировать до последнего часа при загрузке
-    d3.select("#zoom-last-hour-option").dispatch('click');
-});
+document.addEventListener('DOMContentLoaded', main);

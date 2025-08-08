@@ -160,11 +160,9 @@ h1 {
     fill: black; /* Цвет точек */
 }
 
-#event-info-panel {
+.draggable-panel {
     display: none; /* Hidden by default */
     position: absolute; /* Allows for dragging */
-    top: 300px; /* Initial position */
-    right: 40px; /* Initial position */
     background-color: rgba(255, 255, 255, 0.9);
     border: 1px solid #ccc;
     border-radius: 5px;
@@ -175,27 +173,19 @@ h1 {
     width: 300px; /* Fixed width for the panel */
     max-height: 300px; /* Max height to allow scrolling if content is large */
     overflow-y: auto; /* Enable vertical scrolling if content exceeds max-height */
+}
+
+#event-info-panel {
+    top: 300px; /* Initial position */
+    right: 40px; /* Initial position */
 }
 
 #event-edit-panel {
-    display: none; /* Hidden by default */
-    position: absolute; /* Allows for dragging */
     top: 300px; /* Initial position */
     right: 440px; /* Initial position */
-    background-color: rgba(255, 255, 255, 0.9);
-    border: 1px solid #ccc;
-    border-radius: 5px;
-    padding: 15px;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-    z-index: 1000;
-    cursor: grab; /* Indicate it's draggable */
-    width: 300px; /* Fixed width for the panel */
-    max-height: 300px; /* Max height to allow scrolling if content is large */
-    overflow-y: auto; /* Enable vertical scrolling if content exceeds max-height */
 }
 
-#event-info-panel h2,
-#event-edit-panel h2 {
+.draggable-panel h2 {
     margin-top: 0;
     color: #0056b3;
     font-size: 18px;
