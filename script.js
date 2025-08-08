@@ -446,7 +446,7 @@ function setupEscapeListener(infoPanel, editPanel, zoomPanel) {
                 infoPanel.style('display', 'none');
             } else {
                 // Toggle zoomPanel visibility
-                zoomPanel.style('display', zoomPanel.style('display') === 'none' ? 'block' : 'none');
+                zoomPanel.style('display', zoomPanel.style('display') === 'none' ? 'flex' : 'none');
             }
         }
     });
