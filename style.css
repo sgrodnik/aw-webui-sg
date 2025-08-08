@@ -57,6 +57,15 @@ h1 {
     background-color: #0056b3;
 }
 
+.button-group .delete {
+    background-color: #dc3545; /* Red color for delete button */
+    color: white;
+}
+
+.button-group .delete:hover {
+    background-color: #c82333; /* Darker red on hover */
+}
+
 #zoom-panel {
     position: absolute;
     top: 10px; /* Default top position */

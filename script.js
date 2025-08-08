@@ -679,6 +679,33 @@ document.addEventListener('DOMContentLoaded', async () => {
         editPanel.style("display", "none");
     });
 
+    d3.select("#edit-delete-button").on("click", async () => {
+        const originalEvent = editPanel.property("originalEvent");
+        if (!originalEvent) {
+            alert("No event selected for deletion.");
+            return;
+        }
+
+        if (!confirm(`Are you sure you want to delete event ${originalEvent.id}?`)) {
+            return;
+        }
+
+        try {
+            const deleteResponse = await fetch(`http://localhost:5600/api/0/buckets/${originalEvent.bucket}/events/${originalEvent.id}`, {
+                method: 'DELETE'
+            });
+            if (!deleteResponse.ok) {
+                throw new Error(`HTTP error! status: ${deleteResponse.status}`);
+            }
+            console.log(`Event ${originalEvent.id} deleted successfully.`);
+            alert('Event deleted successfully!');
+            location.reload(); // Refresh the page
+        } catch (error) {
+            console.error(`Failed to delete event ${originalEvent.id}:`, error);
+            alert('Failed to delete event. Please check console for details.');
+        }
+    });
+
     d3.select("#edit-save-button").on("click", async (e) => {
         e.preventDefault();
 
