@@ -608,6 +608,32 @@ document.addEventListener('DOMContentLoaded', async () => {
     zoomLastDayInput.on("change", saveInputValues);
     zoomToMorningInput.on("change", saveInputValues);
 
+    // Function to handle mouse wheel scroll for increment/decrement
+    function handleWheelScroll(event) {
+        event.preventDefault(); // Prevent default page scroll
+
+        const input = d3.select(event.currentTarget);
+        let value = parseInt(input.property("value"));
+        const min = parseInt(input.attr("min"));
+        const max = parseInt(input.attr("max"));
+
+        // Determine scroll direction: deltaY < 0 for scroll up (increment), deltaY > 0 for scroll down (decrement)
+        if (event.deltaY < 0) {
+            value = Math.min(value + 1, max); // Increment
+        } else if (event.deltaY > 0) {
+            value = Math.max(value - 1, min); // Decrement
+        }
+
+        input.property("value", value);
+        saveInputValues(); // Save the new value
+        input.dispatch("change"); // Trigger change event to update display if needed
+    }
+
+    // Attach wheel event listeners to input fields
+    zoomLastHourInput.on("wheel", handleWheelScroll);
+    zoomLastDayInput.on("wheel", handleWheelScroll);
+    zoomToMorningInput.on("wheel", handleWheelScroll);
+
     // Zoom functions
     d3.select("#zoom-last-hour-option").on("click", () => {
         const hours = parseInt(zoomLastHourInput.property("value"));

@@ -96,7 +96,7 @@ h1 {
 }
 
 .zoom-option input[type="number"] {
-    width: 30px; /* Increased width for better usability */
+    width: 25px; /* Increased width for better usability */
     margin: 0 5px;
     padding: 3px 5px;
     border: 1px solid #ccc;
