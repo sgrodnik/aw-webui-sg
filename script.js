@@ -84,7 +84,8 @@ function setupChart(events, width, height) {
         .range([height - 50, 50]) // Adjust range to give space for labels and axes
         .padding(0.5);
 
-    const xAxis = d3.axisBottom(xScale);
+    const xAxis = d3.axisBottom(xScale)
+        .tickFormat(d => formatAbsoluteTime(d, xScale.domain())); // Pass visible domain to formatAbsoluteTime
     const xAxisGroup = g.append("g")
         .attr("class", "x-axis-bottom")
         .attr("transform", `translate(0, ${height - 20})`)
@@ -187,6 +188,48 @@ function formatRelativeTime(date, now = new Date()) {
     return `${sign}${years}г ${months % 12}М `;
 }
 
+const shortMonthNames = ["янв", "фев", "мар", "апр", "май", "июн", "июл", "авг", "сен", "окт", "ноя", "дек"];
+
+/**
+ * Formats a date into a 24-hour absolute time string, adapting based on the visible time range.
+ * @param {Date} date - The date to format.
+ * @param {Array<Date>} visibleDomain - The [startDate, endDate] of the currently visible timeline.
+ * @returns {string} The formatted time string (e.g., "14:30", "08 авг").
+ */
+function formatAbsoluteTime(date, visibleDomain) {
+    const visibleDurationMs = visibleDomain[1].getTime() - visibleDomain[0].getTime();
+    const twoDaysInMs = 2 * 24 * 60 * 60 * 1000;
+
+    const hours = String(date.getHours()).padStart(2, '0');
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+
+    if (visibleDurationMs < twoDaysInMs) {
+        // If zoomed in (less than 2 days visible), show only time
+        return `${hours}:${minutes}`;
+    } else {
+        // If zoomed out (2 days or more visible), show day and short month
+        const day = String(date.getDate()).padStart(2, '0');
+        const month = shortMonthNames[date.getMonth()];
+        return `${day} ${month}`;
+    }
+}
+
+/**
+ * Formats a Date object into a local ISO-like string (YYYY-MM-DD HH:MM:SS).
+ * This is useful for input fields where a precise, human-readable, and parsable format is needed.
+ * @param {Date} date - The Date object to format.
+ * @returns {string} The formatted date-time string.
+ */
+function toLocalISO(date) {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    const hours = String(date.getHours()).padStart(2, '0');
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+    const seconds = String(date.getSeconds()).padStart(2, '0');
+    return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+}
+
 function formatDuration(seconds, includeSeconds = true) {
     const hours = Math.floor(seconds / 3600);
     const minutes = Math.floor((seconds % 3600) / 60);
@@ -208,7 +251,7 @@ function renderEventTable(eventData, container) {
 
     tbody.append("tr").html(`<td>Bucket:</td><td>${eventData.bucket}</td>`);
     tbody.append("tr").html(`<td>ID:</td><td>${eventData.id}</td>`);
-    tbody.append("tr").html(`<td>Time:</td><td>${eventData.timestamp.toLocaleString()}</td>`);
+    tbody.append("tr").html(`<td>Time:</td><td>${eventData.timestamp.toLocaleString('ru-RU')}</td>`);
 
     let displayedDuration;
     if (eventData.duration > 900) { // 15 minutes = 900 seconds
@@ -245,7 +288,7 @@ function renderLatestEventsTable(events, container) {
 
     latestEvents.forEach(event => {
         const row = container.select("tbody").append("tr");
-        row.append("td").text(event.timestamp.toLocaleString());
+        row.append("td").text(event.timestamp.toLocaleString('ru-RU'));
         const status = event.data.running ? " ⏳" : "";
         row.append("td").text(formatDuration(event.duration) + status);
         row.append("td").text(`${event.data.label || event.data.status || "N/A"}`);
@@ -462,7 +505,7 @@ function setupZoom(svg, xScale, yScale, xAxisGroup, xAxisTopGroup, segments, tim
         .scaleExtent([1, 5000])
         .on("zoom", (event) => {
             const newXScale = event.transform.rescaleX(xScale);
-            xAxisGroup.call(d3.axisBottom(newXScale));
+            xAxisGroup.call(d3.axisBottom(newXScale).tickFormat(d => formatAbsoluteTime(d, newXScale.domain())));
             xAxisTopGroup.call(d3.axisTop(newXScale)
                 .tickValues(generateRelativeTimeTicks(newXScale, width))
                 .tickFormat(d => formatRelativeTime(d)));
@@ -499,8 +542,8 @@ function renderEventEditPanel(eventData, container) {
     const startTime = eventData.timestamp;
     const endTime = new Date(startTime.getTime() + eventData.duration * 1000);
 
-    tbody.append("tr").html(`<td>Start Time:</td><td><input type="text" id="edit-start-time-input" value="${startTime.toLocaleString()}"></td>`);
-    tbody.append("tr").html(`<td>End Time:</td><td><input type="text" id="edit-end-time-input" value="${endTime.toLocaleString()}"></td>`);
+    tbody.append("tr").html(`<td>Start Time:</td><td><input type="text" id="edit-start-time-input" value="${toLocalISO(startTime)}"></td>`);
+    tbody.append("tr").html(`<td>End Time:</td><td><input type="text" id="edit-end-time-input" value="${toLocalISO(endTime)}"></td>`);
 
     if (eventData.data) {
         for (const key in eventData.data) {
