@@ -270,6 +270,7 @@ export function renderBucketFilterPanel(buckets, onFilterChange, visibleBuckets)
                     }
                 }
                 onFilterChange(); // Trigger redraw
+                localStorage.setItem("visibleBuckets", JSON.stringify(visibleBuckets)); // Save current state
             });
         label.append("span").text(bucketName);
     });

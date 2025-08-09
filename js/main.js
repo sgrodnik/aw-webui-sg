@@ -30,8 +30,21 @@ async function main() {
         return;
     }
 
-    // Initialize visibleBuckets with all buckets (default state)
-    visibleBuckets = [...allBuckets];
+    // Load visibleBuckets from localStorage, or initialize with all buckets
+    const savedVisibleBuckets = localStorage.getItem("visibleBuckets");
+    if (savedVisibleBuckets) {
+        try {
+            visibleBuckets = JSON.parse(savedVisibleBuckets);
+            // Ensure allBuckets are still present in visibleBuckets if they were saved
+            // This handles cases where new buckets might have been added since last session
+            visibleBuckets = visibleBuckets.filter(bucket => allBuckets.includes(bucket));
+        } catch (e) {
+            console.error("Failed to parse visibleBuckets from localStorage, resetting.", e);
+            visibleBuckets = [...allBuckets];
+        }
+    } else {
+        visibleBuckets = [...allBuckets];
+    }
 
     // Render bucket filter panel and set up its change handler
     const bucketFilterPanel = window.d3.select("#bucket-filter-panel");
