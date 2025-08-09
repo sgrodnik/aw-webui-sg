@@ -24,8 +24,8 @@ async function main() {
     const chartHeight = container.node().clientHeight;
 
     // Fetch all buckets first to initialize the filter panel
-    const allBuckets = await fetchBuckets();
-    if (allBuckets.length === 0) {
+    const allBucketsWithCounts = await fetchBuckets(); // Now returns objects with id and count
+    if (allBucketsWithCounts.length === 0) {
         document.body.innerHTML += "<p>No buckets found.</p>";
         return;
     }
@@ -37,24 +37,30 @@ async function main() {
             visibleBuckets = JSON.parse(savedVisibleBuckets);
             // Ensure allBuckets are still present in visibleBuckets if they were saved
             // This handles cases where new buckets might have been added since last session
-            visibleBuckets = visibleBuckets.filter(bucket => allBuckets.includes(bucket));
+            const allBucketIds = allBucketsWithCounts.map(b => b.id);
+            visibleBuckets = visibleBuckets.filter(bucketId => allBucketIds.includes(bucketId));
         } catch (e) {
             console.error("Failed to parse visibleBuckets from localStorage, resetting.", e);
-            visibleBuckets = [...allBuckets];
+            visibleBuckets = allBucketsWithCounts.map(b => b.id);
         }
     } else {
-        visibleBuckets = [...allBuckets];
+        visibleBuckets = allBucketsWithCounts.map(b => b.id);
     }
 
     // Render bucket filter panel and set up its change handler
     const bucketFilterPanel = window.d3.select("#bucket-filter-panel");
-    renderBucketFilterPanel(allBuckets, async () => {
+    renderBucketFilterPanel(allBucketsWithCounts, async () => {
         // When filter changes, redraw the timeline
         await redrawTimeline(allEventsData, visibleBuckets, window.d3.select(INFO_PANEL_SELECTOR), window.d3.select(EDIT_PANEL_SELECTOR), window.d3.select(EVENT_DATA_SELECTOR), renderEventTable, renderEventEditPanel, renderLatestEventsTable);
+        // Re-render bucket filter panel to update counts if needed (e.g., after event creation/deletion)
+        const updatedBucketsWithCounts = await fetchBuckets();
+        renderBucketFilterPanel(updatedBucketsWithCounts, async () => {
+            await redrawTimeline(allEventsData, visibleBuckets, window.d3.select(INFO_PANEL_SELECTOR), window.d3.select(EDIT_PANEL_SELECTOR), window.d3.select(EVENT_DATA_SELECTOR), renderEventTable, renderEventEditPanel, renderLatestEventsTable);
+        }, visibleBuckets);
     }, visibleBuckets);
 
     // Fetch initial events for all visible buckets
-    allEventsData = await Promise.all(visibleBuckets.map(bucketName => fetchEventsForBucket(bucketName))).then(arrays => arrays.flat());
+    allEventsData = await Promise.all(visibleBuckets.map(bucketId => fetchEventsForBucket(bucketId))).then(arrays => arrays.flat());
 
     if (allEventsData.length === 0) {
         document.body.innerHTML += "<p>No data found for initial buckets.</p>";

@@ -243,28 +243,32 @@ export function renderEventEditPanel(eventData, container, isSplitMode = false) 
 
 /**
  * Renders the bucket filter panel with checkboxes for each bucket.
- * @param {Array<string>} buckets - An array of bucket names.
+ * @param {Array<{id: string, count: number}>} buckets - An array of bucket objects with id and event count.
  * @param {function} onFilterChange - Callback function to be called when filter changes.
- * @param {Array<string>} visibleBuckets - The array of currently visible buckets.
+ * @param {Array<string>} visibleBuckets - The array of currently visible buckets (only IDs).
  */
 export function renderBucketFilterPanel(buckets, onFilterChange, visibleBuckets) {
     const bucketList = window.d3.select("#bucket-list");
     bucketList.html(""); // Clear existing content
 
-    buckets.forEach(bucketName => {
+    buckets.forEach(bucket => {
+        if (!bucket || !bucket.id) {
+            console.warn("Skipping undefined or malformed bucket:", bucket);
+            return;
+        }
         const label = bucketList.append("label");
         label.append("input")
             .attr("type", "checkbox")
-            .attr("value", bucketName)
-            .attr("checked", visibleBuckets.includes(bucketName) ? true : null) // Check if already visible
+            .attr("value", bucket.id)
+            .attr("checked", visibleBuckets.includes(bucket.id) ? true : null) // Check if already visible
             .on("change", function() {
-                const bucket = d3.select(this).attr("value");
+                const bucketId = d3.select(this).attr("value");
                 if (this.checked) {
-                    if (!visibleBuckets.includes(bucket)) {
-                        visibleBuckets.push(bucket);
+                    if (!visibleBuckets.includes(bucketId)) {
+                        visibleBuckets.push(bucketId);
                     }
                 } else {
-                    const index = visibleBuckets.indexOf(bucket);
+                    const index = visibleBuckets.indexOf(bucketId);
                     if (index > -1) {
                         visibleBuckets.splice(index, 1);
                     }
@@ -272,7 +276,7 @@ export function renderBucketFilterPanel(buckets, onFilterChange, visibleBuckets)
                 onFilterChange(); // Trigger redraw
                 localStorage.setItem("visibleBuckets", JSON.stringify(visibleBuckets)); // Save current state
             });
-        label.append("span").text(bucketName);
+        label.append("span").text(`${bucket.id} (${bucket.count})`);
     });
 
     // Make the bucket filter panel visible and draggable

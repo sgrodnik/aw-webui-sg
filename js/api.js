@@ -1,8 +1,27 @@
 const API_BASE_URL = 'http://localhost:5600';
 
 /**
- * Fetches all available buckets from the Activity Watch API.
- * @returns {Promise<Array<string>>} A promise that resolves to an array of bucket names.
+ * Fetches the count of events for a specific bucket.
+ * @param {string} bucketName - The name of the bucket.
+ * @returns {Promise<number>} A promise that resolves to the number of events.
+ */
+export async function fetchEventCountForBucket(bucketName) {
+    try {
+        const response = await fetch(`${API_BASE_URL}/api/0/buckets/${bucketName}/events/count`);
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        const data = await response.json();
+        return data; // The count is the response itself
+    } catch (error) {
+        console.error(`Failed to fetch event count for bucket ${bucketName}:`, error);
+        return 0;
+    }
+}
+
+/**
+ * Fetches all available buckets from the Activity Watch API, including their event counts.
+ * @returns {Promise<Array<{id: string, count: number}>>} A promise that resolves to an array of bucket objects with id and event count.
  */
 export async function fetchBuckets() {
     try {
@@ -10,9 +29,15 @@ export async function fetchBuckets() {
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
         }
-        const buckets = await response.json();
-        // The response is an object where keys are bucket IDs. We only need the keys.
-        return Object.keys(buckets);
+        const bucketsData = await response.json();
+        const bucketIds = Object.keys(bucketsData);
+
+        const bucketsWithCountsPromises = bucketIds.map(async (bucketId) => {
+            const count = await fetchEventCountForBucket(bucketId);
+            return { id: bucketId, count: count };
+        });
+
+        return Promise.all(bucketsWithCountsPromises);
     } catch (error) {
         console.error("Failed to fetch buckets:", error);
         return [];
@@ -59,21 +84,21 @@ export async function fetchEventsForBucket(bucketName) {
  * @returns {Promise<Array<Object>>} A promise that resolves to an array of event objects from all buckets.
  */
 export async function fetchAllEvents() {
-    const buckets = await fetchBuckets();
+    const buckets = await fetchBuckets(); // This now returns objects with id and count
     if (buckets.length === 0) {
         console.warn("No buckets found.");
         return [];
     }
 
-    const relevantBuckets = buckets; // Use all fetched buckets
+    const relevantBucketIds = buckets.map(b => b.id); // Extract IDs for fetching events
 
-    if (relevantBuckets.length === 0) {
+    if (relevantBucketIds.length === 0) {
         console.warn("No buckets found after filtering (if any).");
         return [];
     }
 
     // Fetch events for all relevant buckets in parallel
-    const eventPromises = relevantBuckets.map(bucketName => fetchEventsForBucket(bucketName));
+    const eventPromises = relevantBucketIds.map(bucketName => fetchEventsForBucket(bucketName));
     const allEvents = await Promise.all(eventPromises);
 
     // Flatten the array of arrays into a single array of events
