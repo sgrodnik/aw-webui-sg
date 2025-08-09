@@ -8,6 +8,8 @@ const EVENT_SEGMENT_CLASS = "event-segment-group";
 const DRAG_CURSOR_GRABBING = "grabbing";
 const DRAG_CURSOR_GRAB = "grab";
 
+const API_BASE_URL = 'http://localhost:5600';
+
 // Global variables for chart elements and data
 let allEventsData = [];
 let visibleBuckets = [];
@@ -20,7 +22,7 @@ let width, height; // Store width and height globally
  */
 async function fetchBuckets() {
     try {
-        const response = await fetch('http://localhost:5600/api/0/buckets/');
+        const response = await fetch(`${API_BASE_URL}/api/0/buckets/`);
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
         }
@@ -39,7 +41,7 @@ async function fetchBuckets() {
  * @returns {Promise<Array<Object>>} A promise that resolves to an array of event objects for the bucket.
  */
 async function fetchEventsForBucket(bucketName) {
-    const url = `http://localhost:5600/api/0/buckets/${bucketName}/events?limit=1000`;
+    const url = `${API_BASE_URL}/api/0/buckets/${bucketName}/events?limit=1000`;
     try {
         const response = await fetch(url);
         if (!response.ok) {
@@ -880,7 +882,7 @@ function setupEditControls(editPanel, onSaveCallback, svg, zoomBehavior) {
         if (!originalEvent || !confirm(`Are you sure you want to delete event ${originalEvent.id}?`)) return;
 
         try {
-            const response = await fetch(`http://localhost:5600/api/0/buckets/${originalEvent.bucket}/events/${originalEvent.id}`, { method: 'DELETE' });
+            const response = await fetch(`${API_BASE_URL}/api/0/buckets/${originalEvent.bucket}/events/${originalEvent.id}`, { method: 'DELETE' });
             if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
 
             console.log(`Event ${originalEvent.id} deleted successfully.`);
@@ -946,12 +948,12 @@ function setupEditControls(editPanel, onSaveCallback, svg, zoomBehavior) {
                 };
 
                 const createPromises = [
-                    fetch(`http://localhost:5600/api/0/buckets/${originalEvent.bucket}/events`, {
+                    fetch(`${API_BASE_URL}/api/0/buckets/${originalEvent.bucket}/events`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify(firstEvent)
                     }),
-                    fetch(`http://localhost:5600/api/0/buckets/${originalEvent.bucket}/events`, {
+                    fetch(`${API_BASE_URL}/api/0/buckets/${originalEvent.bucket}/events`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify(secondEvent)
@@ -981,7 +983,7 @@ function setupEditControls(editPanel, onSaveCallback, svg, zoomBehavior) {
                     data: { ...originalEvent.data, label: newTitle }
                 };
 
-                const createResponse = await fetch(`http://localhost:5600/api/0/buckets/${originalEvent.bucket}/events`, {
+                const createResponse = await fetch(`${API_BASE_URL}/api/0/buckets/${originalEvent.bucket}/events`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(newEvent)
@@ -991,7 +993,7 @@ function setupEditControls(editPanel, onSaveCallback, svg, zoomBehavior) {
             }
 
             // Delete the old event
-            const deleteResponse = await fetch(`http://localhost:5600/api/0/buckets/${originalEvent.bucket}/events/${originalEvent.id}`, {
+            const deleteResponse = await fetch(`${API_BASE_URL}/api/0/buckets/${originalEvent.bucket}/events/${originalEvent.id}`, {
                 method: 'DELETE'
             });
             if (!deleteResponse.ok) {
