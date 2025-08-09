@@ -197,7 +197,7 @@ h1 {
 #bucket-filter-panel {
     top: 500px; /* Initial position */
     right: 40px; /* Initial position */
-    width: 250px; /* Slightly narrower than other panels */
+    width: 270px; /* Slightly narrower than other panels */
     max-height: 250px; /* Adjust max height as needed */
 }
 
