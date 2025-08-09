@@ -193,6 +193,36 @@ h1 {
     overflow-y: auto; /* Enable vertical scrolling if content exceeds max-height */
 }
 
+/* New styles for the bucket filter panel */
+#bucket-filter-panel {
+    top: 500px; /* Initial position */
+    right: 40px; /* Initial position */
+    width: 250px; /* Slightly narrower than other panels */
+    max-height: 250px; /* Adjust max height as needed */
+}
+
+#bucket-filter-panel h2 {
+    margin-top: 0;
+    color: #0056b3;
+    font-size: 18px;
+}
+
+#bucket-list {
+    margin-top: 10px;
+    font-size: 14px;
+}
+
+#bucket-list label {
+    display: block; /* Each checkbox on a new line */
+    margin-bottom: 8px;
+    cursor: pointer;
+}
+
+#bucket-list input[type="checkbox"] {
+    margin-right: 8px;
+    cursor: pointer;
+}
+
 #event-info-panel {
     top: 300px; /* Initial position */
     right: 40px; /* Initial position */

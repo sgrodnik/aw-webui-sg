@@ -1,9 +1,3 @@
-const bucketUrls = {
-    'aw-stopwatch': 'http://localhost:5600/api/0/buckets/aw-stopwatch/events?limit=1000',
-    'aw-watcher-window_CPU17974': 'http://localhost:5600/api/0/buckets/aw-watcher-window_CPU17974/events?limit=1000',
-    'aw-watcher-afk_CPU17974': 'http://localhost:5600/api/0/buckets/aw-watcher-afk_CPU17974/events?limit=1000'
-};
-
 // Constants for selectors and configuration
 const SVG_SELECTOR = "#timeline-svg";
 const TIMELINE_CONTAINER_SELECTOR = ".timeline-container";
@@ -14,48 +8,96 @@ const EVENT_SEGMENT_CLASS = "event-segment-group";
 const DRAG_CURSOR_GRABBING = "grabbing";
 const DRAG_CURSOR_GRAB = "grab";
 
+// Global variables for chart elements and data
+let allEventsData = [];
+let visibleBuckets = [];
+let svg, g, xScale, yScale, xAxisGroup, xAxisTopGroup, timeExtent, zoomBehavior;
+let width, height; // Store width and height globally
+
 /**
- * Fetches event data from the API for multiple buckets.
+ * Fetches all available buckets from the Activity Watch API.
+ * @returns {Promise<Array<string>>} A promise that resolves to an array of bucket names.
+ */
+async function fetchBuckets() {
+    try {
+        const response = await fetch('http://localhost:5600/api/0/buckets/');
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        const buckets = await response.json();
+        // The response is an object where keys are bucket IDs. We only need the keys.
+        return Object.keys(buckets);
+    } catch (error) {
+        console.error("Failed to fetch buckets:", error);
+        return [];
+    }
+}
+
+/**
+ * Fetches event data for a specific bucket.
+ * @param {string} bucketName - The name of the bucket.
+ * @returns {Promise<Array<Object>>} A promise that resolves to an array of event objects for the bucket.
+ */
+async function fetchEventsForBucket(bucketName) {
+    const url = `http://localhost:5600/api/0/buckets/${bucketName}/events?limit=1000`;
+    try {
+        const response = await fetch(url);
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status} for bucket ${bucketName}`);
+        }
+        const events = await response.json();
+
+        // Process events: add bucket name and convert timestamp
+        const processedEvents = events.map(d => {
+            // Find and update the current running event
+            if (d.data.running === true && d.duration === 0) {
+                const now = new Date();
+                const eventTimestamp = new Date(d.timestamp);
+                d.duration = (now - eventTimestamp) / 1000; // Duration in seconds
+            }
+            return {
+                ...d,
+                bucket: bucketName,
+                timestamp: new Date(d.timestamp)
+            };
+        });
+        return processedEvents;
+    } catch (error) {
+        console.error(`Failed to fetch data for bucket ${bucketName}:`, error);
+        return [];
+    }
+}
+
+/**
+ * Fetches event data from the API for all relevant buckets.
  * @returns {Promise<Array<Object>>} A promise that resolves to an array of event objects from all buckets.
  */
-async function fetchEvents() {
-    const allEvents = [];
-    for (const bucketName in bucketUrls) {
-        if (!bucketUrls.hasOwnProperty(bucketName)) continue;
-        const url = bucketUrls[bucketName];
-        try {
-            const response = await fetch(url);
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status} for bucket ${bucketName}`);
-            }
-            const events = await response.json();
-
-            // Add bucket name to each event and process
-            const processedEvents = events.map(d => {
-                // Find and update the current running event
-                if (d.data.running === true && d.duration === 0) {
-                    const now = new Date();
-                    const eventTimestamp = new Date(d.timestamp);
-                    d.duration = (now - eventTimestamp) / 1000; // Duration in seconds
-                }
-                return {
-                    ...d,
-                    bucket: bucketName,
-                    timestamp: new Date(d.timestamp)
-                };
-            });
-            allEvents.push(...processedEvents);
-
-        } catch (error) {
-            console.error(`Failed to fetch data for bucket ${bucketName}:`, error);
-        }
+async function fetchAllEvents() {
+    const buckets = await fetchBuckets();
+    if (buckets.length === 0) {
+        console.warn("No buckets found.");
+        return [];
     }
 
-    if (allEvents.length === 0) {
-        console.warn("API returned an empty list of events.");
+    const relevantBuckets = buckets; // Use all fetched buckets
+
+    if (relevantBuckets.length === 0) {
+        console.warn("No buckets found after filtering (if any).");
+        return [];
     }
 
-    return allEvents;
+    // Fetch events for all relevant buckets in parallel
+    const eventPromises = relevantBuckets.map(bucketName => fetchEventsForBucket(bucketName));
+    const allEvents = await Promise.all(eventPromises);
+
+    // Flatten the array of arrays into a single array of events
+    const flattenedEvents = allEvents.flat();
+
+    if (flattenedEvents.length === 0) {
+        console.warn("API returned an empty list of events for relevant buckets.");
+    }
+
+    return flattenedEvents;
 }
 
 /**
@@ -379,7 +421,8 @@ function renderEventPoints(events, xScale, yScale, g, infoPanel, editPanel, data
             if (d.data.running) {
                 classes.push("running");
             }
-            if (d.bucket === 'aw-watcher-afk_CPU17974') {
+            // FIX: Use startsWith for dynamic bucket names
+            if (d.bucket.startsWith('aw-watcher-afk_')) {
                 if (d.data.status === 'afk') {
                     classes.push("afk-event");
                 } else if (d.data.status === 'not-afk') {
@@ -572,68 +615,167 @@ function renderEventEditPanel(eventData, container, isSplitMode = false) {
     }
 }
 
+/**
+ * Renders the bucket filter panel with checkboxes for each bucket.
+ * @param {Array<string>} buckets - An array of bucket names.
+ * @param {function} onFilterChange - Callback function to be called when filter changes.
+ */
+function renderBucketFilterPanel(buckets, onFilterChange) {
+    const bucketList = d3.select("#bucket-list");
+    bucketList.html(""); // Clear existing content
+
+    // Initialize visibleBuckets with all buckets by default
+    visibleBuckets = [...buckets];
+
+    buckets.forEach(bucketName => {
+        const label = bucketList.append("label");
+        label.append("input")
+            .attr("type", "checkbox")
+            .attr("value", bucketName)
+            .attr("checked", true) // All buckets are checked by default
+            .on("change", function() {
+                const bucket = d3.select(this).attr("value");
+                if (this.checked) {
+                    visibleBuckets.push(bucket);
+                } else {
+                    visibleBuckets = visibleBuckets.filter(b => b !== bucket);
+                }
+                onFilterChange(); // Trigger redraw
+            });
+        label.append("span").text(bucketName);
+    });
+
+    // Make the bucket filter panel visible and draggable
+    d3.select("#bucket-filter-panel").style("display", "block");
+    setupPanelDragging(d3.select("#bucket-filter-panel"));
+}
+
+/**
+ * Redraws the timeline based on the currently visible buckets.
+ * @param {Array<Object>} allEvents - The complete array of all fetched events.
+ * @param {d3.ScaleTime} xScale - The D3 time scale for the x-axis.
+ * @param {d3.ScalePoint} yScale - The D3 point scale for the y-axis.
+ * @param {d3.Selection} g - The D3 selection for the SVG group.
+ * @param {d3.Selection} infoPanel - The D3 selection for the info panel.
+ * @param {d3.Selection} editPanel - The D3 selection for the edit panel.
+ * @param {d3.Selection} dataPre - The D3 selection for the pre element to display data.
+ * @param {number} width - The width of the SVG container.
+ * @param {d3.ZoomBehavior<SVGSVGElement>} zoomBehavior - The D3 zoom behavior.
+ * @param {d3.Selection} infoPanel - The D3 selection for the info panel.
+ * @param {d3.Selection} editPanel - The D3 selection for the edit panel.
+ * @param {d3.Selection} dataPre - The D3 selection for the pre element to display data.
+ */
+async function redrawTimeline(infoPanel, editPanel, dataPre) {
+    // Identify buckets that are visible but not yet loaded
+    const loadedBuckets = new Set(allEventsData.map(d => d.bucket));
+    const bucketsToLoad = visibleBuckets.filter(bucket => !loadedBuckets.has(bucket));
+
+    // Fetch events for newly visible buckets and add them to allEventsData
+    if (bucketsToLoad.length > 0) {
+        const newEventsPromises = bucketsToLoad.map(bucketName => fetchEventsForBucket(bucketName));
+        const newEventsArrays = await Promise.all(newEventsPromises);
+        const newEvents = newEventsArrays.flat();
+        allEventsData = allEventsData.concat(newEvents);
+    }
+
+    // Filter events based on currently visible buckets
+    const filteredEvents = allEventsData.filter(event => visibleBuckets.includes(event.bucket));
+
+    // Clear previous chart elements
+    g.selectAll("*").remove();
+
+    // Re-setup chart with new data (especially for time extent and unique buckets)
+    // We need to re-calculate scales based on the *filtered* events to ensure correct rendering
+    let chartSetup = setupChart(filteredEvents, width, height);
+    svg = chartSetup.svg;
+    g = chartSetup.g;
+    xScale = chartSetup.xScale;
+    yScale = chartSetup.yScale;
+    xAxisGroup = chartSetup.xAxisGroup;
+    xAxisTopGroup = chartSetup.xAxisTopGroup;
+    timeExtent = chartSetup.timeExtent;
+
+    // Re-render points and setup zoom
+    let segments = renderEventPoints(filteredEvents, xScale, yScale, g, infoPanel, editPanel, dataPre);
+    zoomBehavior = setupZoom(svg, xScale, yScale, xAxisGroup, xAxisTopGroup, segments, timeExtent, width);
+
+    // Update latest events table
+    renderLatestEventsTable(filteredEvents, d3.select("#latest-events-table"));
+
+    // Restore zoom/pan state if possible
+    const currentTransform = d3.zoomTransform(svg.node());
+    if (currentTransform && currentTransform.k !== 1) {
+        svg.call(zoomBehavior.transform, currentTransform);
+    }
+}
+
+
 // --- Main Application Setup ---
 async function main() {
     const zoomPanel = d3.select("#zoom-panel");
     loadPanelPosition(zoomPanel, 'zoomPanelPosition');
     zoomPanel.style("visibility", "visible");
 
-    let events = await fetchEvents();
-    if (events.length === 0) {
-        document.body.innerHTML += "<p>No data found.</p>";
+    const container = d3.select(TIMELINE_CONTAINER_SELECTOR);
+    width = container.node().clientWidth; // Assign to global width
+    height = container.node().clientHeight; // Assign to global height
+
+    // Fetch all buckets first to initialize the filter panel
+    const allBuckets = await fetchBuckets();
+    if (allBuckets.length === 0) {
+        document.body.innerHTML += "<p>No buckets found.</p>";
         return;
     }
 
-    const container = d3.select(TIMELINE_CONTAINER_SELECTOR);
-    const width = container.node().clientWidth;
-    const height = container.node().clientHeight;
+    // Render bucket filter panel and set up its change handler
+    const bucketFilterPanel = d3.select("#bucket-filter-panel");
+    renderBucketFilterPanel(allBuckets, async () => {
+        // When filter changes, redraw the timeline
+        await redrawTimeline(xScale, yScale, g, infoPanel, editPanel, dataPre, width, zoomBehavior, svg, height);
+    });
 
-    let { svg, g, xScale, yScale, xAxisGroup, xAxisTopGroup, timeExtent } = setupChart(events, width, height);
+    // Initialize visibleBuckets with all buckets (default state)
+    visibleBuckets = [...allBuckets];
+
+    // Fetch initial events for all visible buckets
+    allEventsData = await Promise.all(visibleBuckets.map(bucketName => fetchEventsForBucket(bucketName))).then(arrays => arrays.flat());
+
+    if (allEventsData.length === 0) {
+        document.body.innerHTML += "<p>No data found for initial buckets.</p>";
+        return;
+    }
+
+    // Setup initial chart
+    let chartSetup = setupChart(allEventsData, width, height);
+    svg = chartSetup.svg;
+    g = chartSetup.g;
+    xScale = chartSetup.xScale;
+    yScale = chartSetup.yScale;
+    xAxisGroup = chartSetup.xAxisGroup;
+    xAxisTopGroup = chartSetup.xAxisTopGroup;
+    timeExtent = chartSetup.timeExtent;
+
     const infoPanel = d3.select(INFO_PANEL_SELECTOR);
     const editPanel = d3.select(EDIT_PANEL_SELECTOR);
     const dataPre = d3.select(EVENT_DATA_SELECTOR);
 
-    let segments = renderEventPoints(events, xScale, yScale, g, infoPanel, editPanel, dataPre);
-    let zoomBehavior = setupZoom(svg, xScale, yScale, xAxisGroup, xAxisTopGroup, segments, timeExtent, width);
+    // Render event points and setup zoom
+    let segments = renderEventPoints(allEventsData, xScale, yScale, g, infoPanel, editPanel, dataPre);
+    zoomBehavior = setupZoom(svg, xScale, yScale, xAxisGroup, xAxisTopGroup, segments, timeExtent, width);
 
+    // Render latest events table
     const latestEventsTable = d3.select("#latest-events-table");
-    renderLatestEventsTable(events, latestEventsTable);
+    renderLatestEventsTable(allEventsData, latestEventsTable);
 
     // --- UI Interactions Setup ---
     setupZoomControls(svg, xScale, xAxisGroup, segments, width, zoomBehavior);
-    setupPanelDragging(infoPanel, editPanel, zoomPanel);
+    setupPanelDragging(infoPanel, editPanel, zoomPanel, d3.select("#bucket-filter-panel")); // Make new panel draggable
     setupEscapeListener(infoPanel, editPanel, zoomPanel);
-
-    // --- Refresh Function ---
-    const refreshDataAndRedraw = async () => {
-        // Save current zoom/pan state
-        const currentTransform = d3.zoomTransform(svg.node());
-
-        events = await fetchEvents();
-
-        // Clear previous chart elements
-        g.selectAll("*").remove();
-
-        // Re-setup chart with new data
-        const newChart = setupChart(events, width, height);
-        xScale = newChart.xScale;
-        yScale = newChart.yScale;
-        xAxisGroup = newChart.xAxisGroup;
-        xAxisTopGroup = newChart.xAxisTopGroup;
-        timeExtent = newChart.timeExtent;
-        g = newChart.g; // Re-assign g from the new setup
-
-        // Re-render points and setup zoom
-        segments = renderEventPoints(events, xScale, yScale, g, infoPanel, editPanel, dataPre);
-        zoomBehavior = setupZoom(svg, xScale, yScale, xAxisGroup, xAxisTopGroup, segments, timeExtent, width);
-
-        renderLatestEventsTable(events, latestEventsTable);
-
-        // Restore zoom/pan state
-        svg.call(zoomBehavior.transform, currentTransform);
-    };
-
-    setupEditControls(editPanel, refreshDataAndRedraw, svg, zoomBehavior);
+    setupEditControls(editPanel, async () => {
+        // Re-fetch all events (including potential new ones from edits) and redraw
+        allEventsData = await Promise.all(visibleBuckets.map(bucketName => fetchEventsForBucket(bucketName))).then(arrays => arrays.flat());
+        await redrawTimeline(xScale, yScale, g, infoPanel, editPanel, dataPre, width, zoomBehavior, svg, height);
+    }, svg, zoomBehavior);
 
     // Initial zoom
     d3.select("#zoom-last-hour-option").dispatch('click');
@@ -853,7 +995,7 @@ function setupEditControls(editPanel, onSaveCallback, svg, zoomBehavior) {
                 method: 'DELETE'
             });
             if (!deleteResponse.ok) {
-                throw new Error(`HTTP error deleting old event! status: ${deleteResponse.status}`);
+                throw new Error(`HTTP error deleting old event! status: ${response.status}`);
             }
             console.log(`Old event ${originalEvent.id} deleted successfully.`);
 
