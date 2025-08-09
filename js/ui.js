@@ -10,6 +10,9 @@ const DRAG_CURSOR_GRABBING = "grabbing";
 const DRAG_CURSOR_GRAB = "grab";
 const NOTIFICATION_CONTAINER_SELECTOR = "#notification-container";
 
+// Global variable to keep track of the currently active time input field
+let activeTimeInput = null;
+
 /**
  * Displays a non-intrusive notification in the corner of the screen.
  * @param {string} message - The message to display in the notification.
@@ -206,6 +209,7 @@ export function setupEscapeListener(infoPanel, editPanel, zoomPanel) {
         if (event.key === 'Escape') {
             if (editPanel.style('display') === 'block') {
                 editPanel.style('display', 'none');
+                activeTimeInput = null; // Reset active input
             } else if (infoPanel.style('display') === 'block') {
                 infoPanel.style('display', 'none');
             } else {
@@ -235,8 +239,14 @@ export function renderEventEditPanel(eventData, container, isSplitMode = false) 
     const startTime = eventData.timestamp;
     let endTime = new Date(startTime.getTime() + eventData.duration * 1000);
 
-    tbody.append("tr").html(`<td>Start Time:</td><td><input type="text" id="edit-start-time-input" value="${toLocalISO(startTime)}"></td>`);
-    tbody.append("tr").html(`<td>End Time:</td><td><input type="text" id="edit-end-time-input" value="${toLocalISO(endTime)}"></td>`);
+    tbody.append("tr").html(`<td>Start Time:</td><td><input type="text" id="edit-start-time-input" class="time-input" value="${toLocalISO(startTime)}"></td>`);
+    tbody.append("tr").html(`<td>End Time:</td><td><input type="text" id="edit-end-time-input" class="time-input" value="${toLocalISO(endTime)}"></td>`);
+
+    // Add focus/blur handlers to update activeTimeInput
+    container.selectAll(".time-input")
+        .on("focus", function() {
+            activeTimeInput = this;
+        });
 
     if (isSplitMode) {
         const splitTime = new Date(startTime.getTime() + eventData.duration * 500); // Half duration
@@ -245,8 +255,14 @@ export function renderEventEditPanel(eventData, container, isSplitMode = false) 
         tbody.select("#edit-end-time-input").property("value", toLocalISO(endTime));
 
         tbody.append("tr").attr("class", "split-mode-field").html(`<td>Title 2:</td><td><input type="text" id="edit-title-2-input" value="${eventData.data.label || ''}"></td>`);
-        tbody.append("tr").attr("class", "split-mode-field").html(`<td>Start Time 2:</td><td><input type="text" id="edit-start-time-2-input" value="${toLocalISO(splitTime)}"></td>`);
-        tbody.append("tr").attr("class", "split-mode-field").html(`<td>End Time 2:</td><td><input type="text" id="edit-end-time-2-input" value="${toLocalISO(new Date(eventData.timestamp.getTime() + eventData.duration * 1000))}"></td>`);
+        tbody.append("tr").attr("class", "split-mode-field").html(`<td>Start Time 2:</td><td><input type="text" id="edit-start-time-2-input" class="time-input" value="${toLocalISO(splitTime)}"></td>`);
+        tbody.append("tr").attr("class", "split-mode-field").html(`<td>End Time 2:</td><td><input type="text" id="edit-end-time-2-input" class="time-input" value="${toLocalISO(new Date(eventData.timestamp.getTime() + eventData.duration * 1000))}"></td>`);
+
+        // Add focus/blur handlers for split mode inputs
+        container.selectAll(".split-mode-field .time-input")
+            .on("focus", function() {
+                activeTimeInput = this;
+            });
     }
 
     if (eventData.data) {
@@ -288,6 +304,14 @@ export function renderEventEditPanel(eventData, container, isSplitMode = false) 
             saveButton.property("disabled", initialFormState === currentFormState);
         });
     }
+}
+
+/**
+ * Returns the currently active time input field.
+ * @returns {HTMLElement|null} The active input element or null if none is active.
+ */
+export function getActiveTimeInput() {
+    return activeTimeInput;
 }
 
 /**
@@ -406,6 +430,7 @@ export function setupEditControls(editPanel, onSaveCallback, svg, zoomBehavior) 
         editPanel.property("isSplitMode", false);
         splitButton.property("disabled", false);
         editPanel.selectAll(".split-mode-field").remove();
+        activeTimeInput = null; // Reset active input
     };
 
     cancelButton.on("click", () => {

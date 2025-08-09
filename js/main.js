@@ -1,7 +1,8 @@
 
 import { fetchBuckets, fetchEventsForBucket, fetchAllEvents } from './api.js';
 import { setupChart, renderEventPoints, setupZoom, zoomToRange, redrawTimeline, svg, g, xScale, yScale, xAxisGroup, xAxisTopGroup, timeExtent, zoomBehavior, width, height } from './timeline.js';
-import { renderEventTable, renderLatestEventsTable, setupPanelDragging, loadPanelPosition, setupEscapeListener, renderEventEditPanel, renderBucketFilterPanel, setupZoomControls, setupEditControls } from './ui.js';
+import { renderEventTable, renderLatestEventsTable, setupPanelDragging, loadPanelPosition, setupEscapeListener, renderEventEditPanel, renderBucketFilterPanel, setupZoomControls, setupEditControls, getActiveTimeInput } from './ui.js';
+import { setupTimelineHoverInteraction } from './timeline.js';
 
 // Constants for selectors and configuration
 const TIMELINE_CONTAINER_SELECTOR = ".timeline-container";
@@ -91,6 +92,9 @@ async function main() {
         allEventsData = await Promise.all(visibleBuckets.map(bucketName => fetchEventsForBucket(bucketName))).then(arrays => arrays.flat());
         await redrawTimeline(allEventsData, visibleBuckets, infoPanel, editPanel, dataPre, renderEventTable, renderEventEditPanel, renderLatestEventsTable);
     }, svg, zoomBehavior);
+
+    // Setup timeline hover interaction for time input
+    setupTimelineHoverInteraction(svg, editPanel); // No need to pass xScale here anymore
 
     // Initial zoom
     window.d3.select("#zoom-last-hour-option").dispatch('click');
