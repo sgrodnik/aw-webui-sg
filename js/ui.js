@@ -8,6 +8,29 @@ const EDIT_PANEL_SELECTOR = "#event-edit-panel";
 const EVENT_DATA_SELECTOR = "#event-data-table";
 const DRAG_CURSOR_GRABBING = "grabbing";
 const DRAG_CURSOR_GRAB = "grab";
+const NOTIFICATION_CONTAINER_SELECTOR = "#notification-container";
+
+/**
+ * Displays a non-intrusive notification in the corner of the screen.
+ * @param {string} message - The message to display in the notification.
+ * @param {number} duration - The duration in milliseconds for which the notification should be visible.
+ */
+export function showNotification(message, duration = 3000) {
+    const container = window.d3.select(NOTIFICATION_CONTAINER_SELECTOR);
+    if (container.empty()) {
+        console.error("Notification container not found.");
+        return;
+    }
+
+    const notification = container.append("div")
+        .attr("class", "notification-item")
+        .text(message);
+
+    // Remove the notification after the specified duration
+    setTimeout(() => {
+        notification.remove();
+    }, duration);
+}
 
 /**
  * Renders the event attributes table in the info panel.
@@ -336,14 +359,14 @@ export function setupZoomControls(svg, zoomToRangeCallback) {
             let startTime, endTime = new Date();
 
             if (config.unit === 'hours') {
-                if (isNaN(value) || value < 1 || value > 99) return alert("Please enter a number between 1 and 99 for hours.");
+                if (isNaN(value) || value < 1 || value > 99) return showNotification("Please enter a number between 1 and 99 for hours.");
                 startTime = new Date(endTime.getTime() - value * 60 * 60 * 1000);
             } else if (config.unit === 'days') {
-                if (isNaN(value) || value < 1 || value > 99) return alert("Please enter a number between 1 and 99 for days.");
+                if (isNaN(value) || value < 1 || value > 99) return showNotification("Please enter a number between 1 and 99 for days.");
                 startTime = new Date(endTime.getTime() - value * 24 * 60 * 60 * 1000);
             } else if (config.unit === 'morning') {
                 const currentHour = endTime.getHours();
-                if (isNaN(value) || value < 0 || value > currentHour) return alert(`Please enter a number between 0 and ${currentHour} for the morning hour.`);
+                if (isNaN(value) || value < 0 || value > currentHour) return showNotification(`Please enter a number between 0 and ${currentHour} for the morning hour.`);
                 startTime = new Date(endTime.getFullYear(), endTime.getMonth(), endTime.getDate(), value, 0, 0, 0);
             }
             zoomToRangeCallback(startTime, endTime);
@@ -395,11 +418,11 @@ export function setupEditControls(editPanel, onSaveCallback, svg, zoomBehavior) 
 
         try {
             await deleteEvent(originalEvent.bucket, originalEvent.id);
-            alert('Event deleted successfully!');
+            showNotification('Event deleted successfully!');
             resetEditPanel();
             onSaveCallback();
         } catch (error) {
-            alert('Failed to delete event. Please check console for details.');
+            showNotification('Failed to delete event. Please check console for details.');
         }
     });
 
@@ -444,7 +467,7 @@ export function setupEditControls(editPanel, onSaveCallback, svg, zoomBehavior) 
                 const endTime2 = new Date(window.d3.select("#edit-end-time-2-input").property("value"));
                 const duration2 = (endTime2.getTime() - startTime2.getTime()) / 1000;
 
-                if (duration1 < 0 || duration2 < 0) return alert('End time cannot be before start time for either event.');
+                if (duration1 < 0 || duration2 < 0) return showNotification('End time cannot be before start time for either event.');
 
                 const firstEvent = {
                     timestamp: startTime1.toISOString(),
@@ -462,7 +485,7 @@ export function setupEditControls(editPanel, onSaveCallback, svg, zoomBehavior) 
                     createEvent(originalEvent.bucket, firstEvent),
                     createEvent(originalEvent.bucket, secondEvent)
                 ]);
-                console.log('Both new events created successfully.');
+                showNotification('Both new events created successfully.');
 
             } else {
                 const newTitle = window.d3.select("#edit-title-input").property("value");
@@ -470,7 +493,7 @@ export function setupEditControls(editPanel, onSaveCallback, svg, zoomBehavior) 
                 const newEndTime = new Date(window.d3.select("#edit-end-time-input").property("value"));
                 const newDuration = (newEndTime.getTime() - newStartTime.getTime()) / 1000;
 
-                if (newDuration < 0) return alert('End time cannot be before start time.');
+                if (newDuration < 0) return showNotification('End time cannot be before start time.');
 
                 const newEvent = {
                     timestamp: newStartTime.toISOString(),
@@ -484,7 +507,7 @@ export function setupEditControls(editPanel, onSaveCallback, svg, zoomBehavior) 
             // Delete the old event
             await deleteEvent(originalEvent.bucket, originalEvent.id);
 
-            alert('Event updated successfully!');
+            showNotification('Event updated successfully!');
             resetEditPanel();
             await onSaveCallback(); // This will re-fetch and re-render, restoring zoom
 
@@ -494,7 +517,7 @@ export function setupEditControls(editPanel, onSaveCallback, svg, zoomBehavior) 
 
         } catch (error) {
             console.error('Failed to update event:', error);
-            alert('Failed to update event. Please check console for details.');
+            showNotification('Failed to update event. Please check console for details.');
         }
     });
 }
