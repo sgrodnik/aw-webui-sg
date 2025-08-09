@@ -242,29 +242,29 @@ export function renderEventEditPanel(eventData, container, isSplitMode = false) 
 
     // --- Save button state management ---
     const saveButton = window.d3.select("#edit-save-button");
-    saveButton.property("disabled", true); // Initially disable the save button
 
-    const getFormValues = () => {
-        const values = {
-            title: window.d3.select("#edit-title-input").property("value"),
-            startTime: window.d3.select("#edit-start-time-input").property("value"),
-            endTime: window.d3.select("#edit-end-time-input").property("value"),
+    if (isSplitMode) {
+        saveButton.property("disabled", false); // Always enabled in split mode
+    } else {
+        saveButton.property("disabled", true); // Initially disable in normal edit mode
+
+        const getFormValues = () => {
+            const values = {
+                title: window.d3.select("#edit-title-input").property("value"),
+                startTime: window.d3.select("#edit-start-time-input").property("value"),
+                endTime: window.d3.select("#edit-end-time-input").property("value"),
+            };
+            return values;
         };
-        if (isSplitMode) {
-            values.title2 = window.d3.select("#edit-title-2-input").property("value");
-            values.startTime2 = window.d3.select("#edit-start-time-2-input").property("value");
-            values.endTime2 = window.d3.select("#edit-end-time-2-input").property("value");
-        }
-        return values;
-    };
 
-    const initialFormState = JSON.stringify(getFormValues());
+        const initialFormState = JSON.stringify(getFormValues());
 
-    const inputs = container.selectAll('input[type="text"]:not([readonly])');
-    inputs.on("input", () => {
-        const currentFormState = JSON.stringify(getFormValues());
-        saveButton.property("disabled", initialFormState === currentFormState);
-    });
+        const inputs = container.selectAll('input[type="text"]:not([readonly])');
+        inputs.on("input", () => {
+            const currentFormState = JSON.stringify(getFormValues());
+            saveButton.property("disabled", initialFormState === currentFormState);
+        });
+    }
 }
 
 /**
@@ -411,9 +411,12 @@ export function setupEditControls(editPanel, onSaveCallback, svg, zoomBehavior) 
         editPanel.property("isSplitMode", true);
         renderEventEditPanel(originalEvent, window.d3.select("#edit-event-data-table"), true);
 
-        // Synchronize Start Time 2 with End Time 1
-        window.d3.select("#edit-end-time-input").on("change", function() {
-            window.d3.select("#edit-start-time-2-input").property("value", this.value);
+        // Synchronize Start Time 2 with End Time 1 and trigger change detection
+        window.d3.select("#edit-end-time-input").on("input", function() {
+            const dependentInput = window.d3.select("#edit-start-time-2-input");
+            dependentInput.property("value", this.value);
+            // Manually dispatch an 'input' event to trigger the save button state check
+            dependentInput.node().dispatchEvent(new Event('input'));
         });
     });
 
