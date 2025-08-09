@@ -239,6 +239,32 @@ export function renderEventEditPanel(eventData, container, isSplitMode = false) 
             }
         }
     }
+
+    // --- Save button state management ---
+    const saveButton = window.d3.select("#edit-save-button");
+    saveButton.property("disabled", true); // Initially disable the save button
+
+    const getFormValues = () => {
+        const values = {
+            title: window.d3.select("#edit-title-input").property("value"),
+            startTime: window.d3.select("#edit-start-time-input").property("value"),
+            endTime: window.d3.select("#edit-end-time-input").property("value"),
+        };
+        if (isSplitMode) {
+            values.title2 = window.d3.select("#edit-title-2-input").property("value");
+            values.startTime2 = window.d3.select("#edit-start-time-2-input").property("value");
+            values.endTime2 = window.d3.select("#edit-end-time-2-input").property("value");
+        }
+        return values;
+    };
+
+    const initialFormState = JSON.stringify(getFormValues());
+
+    const inputs = container.selectAll('input[type="text"]:not([readonly])');
+    inputs.on("input", () => {
+        const currentFormState = JSON.stringify(getFormValues());
+        saveButton.property("disabled", initialFormState === currentFormState);
+    });
 }
 
 /**
