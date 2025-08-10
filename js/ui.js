@@ -247,11 +247,6 @@ export function renderEventEditPanel(eventData, container, isSplitMode = false) 
     tbody.append("tr").html(`<td>Start Time:</td><td><input type="text" id="edit-start-time-input" class="time-input" value="${toLocalISO(startTime)}"></td>`);
     tbody.append("tr").html(`<td>End Time:</td><td><input type="text" id="edit-end-time-input" class="time-input" value="${toLocalISO(endTime)}"></td>`);
 
-    container.selectAll(".time-input")
-        .on("focus", function() {
-            activeTimeInput = this;
-        });
-
     if (isSplitMode) {
         const splitTime = new Date(startTime.getTime() + eventData.duration * 500);
         endTime = splitTime;
@@ -261,11 +256,6 @@ export function renderEventEditPanel(eventData, container, isSplitMode = false) 
         tbody.append("tr").attr("class", "split-mode-field").html(`<td>Title 2:</td><td><input type="text" id="edit-title-2-input" value="${eventData.data.label || ''}"></td>`);
         tbody.append("tr").attr("class", "split-mode-field").html(`<td>Start Time 2:</td><td><input type="text" id="edit-start-time-2-input" class="time-input" value="${toLocalISO(splitTime)}"></td>`);
         tbody.append("tr").attr("class", "split-mode-field").html(`<td>End Time 2:</td><td><input type="text" id="edit-end-time-2-input" class="time-input" value="${toLocalISO(new Date(eventData.timestamp.getTime() + eventData.duration * 1000))}"></td>`);
-
-        container.selectAll(".split-mode-field .time-input")
-            .on("focus", function() {
-                activeTimeInput = this;
-            });
     }
 
     if (eventData.data) {
@@ -281,6 +271,11 @@ export function renderEventEditPanel(eventData, container, isSplitMode = false) 
             }
         }
     }
+
+    container.selectAll(".time-input")
+        .on("focus", function() {
+            activeTimeInput = this;
+        });
 
     const saveButton = window.d3.select("#edit-save-button");
 

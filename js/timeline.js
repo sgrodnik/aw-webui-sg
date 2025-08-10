@@ -99,6 +99,10 @@ export function renderEventPoints(events, infoPanel, editPanel, dataPre, renderE
             window.d3.select(`#latest-events-table tbody tr[data-event-id="${d.id}"]`).classed("highlighted", false);
         })
         .on("click", (event, d) => {
+            if (editPanel.style("display") === "block" && editPanel.property("isSplitMode")) {
+                return;
+            }
+
             panAndZoomToEvent(d);
 
             if (d.bucket.startsWith('aw-stopwatch')) {
