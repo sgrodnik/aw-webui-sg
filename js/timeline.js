@@ -1,7 +1,6 @@
 import { formatAbsoluteTime, formatRelativeTime, generateRelativeTimeTicks, toLocalISO } from './utils.js';
-import { getActiveTimeInput } from './ui.js'; // Import the function to get the active input
+import { getActiveTimeInput } from './ui.js';
 
-// Constants for selectors and configuration
 const SVG_SELECTOR = "#timeline-svg";
 const TIMELINE_CONTAINER_SELECTOR = ".timeline-container";
 const EVENT_SEGMENT_CLASS = "event-segment-group";
@@ -9,12 +8,11 @@ const BAR_HEIGHT = 10;
 const POINT_SIZE = 1;
 const HOVER_LINE_CLASS = "hover-line";
 const HOVER_TOOLTIP_CLASS = "hover-tooltip";
-const TOOLTIP_OFFSET_Y = 25; // Offset for the tooltip from the top axis
+const TOOLTIP_OFFSET_Y = 25;
 
-// Global variables for chart elements and data
 export let svg, g, xScale, yScale, xAxisGroup, xAxisTopGroup, timeExtent, zoomBehavior;
-export let width, height; // Store width and height globally
-let hoverLine, hoverTooltip; // Elements for hover interaction
+export let width, height;
+let hoverLine, hoverTooltip;
 
 /**
  * Sets up the D3 chart elements, scales, and axes.
@@ -42,22 +40,22 @@ export function setupChart(events, chartWidth, chartHeight) {
     const uniqueBuckets = [...new Set(events.map(d => d.bucket))].sort();
     yScale = d3.scalePoint()
         .domain(uniqueBuckets)
-        .range([height - 50, 50]) // Adjust range to give space for labels and axes
+        .range([height - 50, 50])
         .padding(0.5);
 
     const xAxis = window.d3.axisBottom(xScale)
-        .tickFormat(d => formatAbsoluteTime(d, xScale.domain())); // Pass visible domain to formatAbsoluteTime
+        .tickFormat(d => formatAbsoluteTime(d, xScale.domain()));
     xAxisGroup = g.append("g")
         .attr("class", "x-axis-bottom")
         .attr("transform", `translate(0, ${height - 20})`)
         .call(xAxis);
 
     const xAxisTop = window.d3.axisTop(xScale)
-        .tickValues(generateRelativeTimeTicks(xScale, width)) // Use new function to generate ticks
-        .tickFormat(d => formatRelativeTime(d)); // Use new function to format
+        .tickValues(generateRelativeTimeTicks(xScale, width))
+        .tickFormat(d => formatRelativeTime(d));
     xAxisTopGroup = g.append("g")
         .attr("class", "x-axis-top")
-        .attr("transform", `translate(0, 20)`) // Place at the top
+        .attr("transform", `translate(0, 20)`)
         .call(xAxisTop);
 
     return { svg, g, xScale, yScale, xAxisGroup, xAxisTopGroup, timeExtent };
@@ -75,7 +73,7 @@ export function renderEventPoints(events, infoPanel, editPanel, dataPre, renderE
     const segments = g.selectAll(`.${EVENT_SEGMENT_CLASS}`)
         .data(events)
         .enter().append("g")
-        .attr("id", d => `event-${d.id}`) // Add unique ID to each event group
+        .attr("id", d => `event-${d.id}`)
         .attr("class", d => {
             let classes = [EVENT_SEGMENT_CLASS];
             if (d.data.running) {
@@ -95,20 +93,17 @@ export function renderEventPoints(events, infoPanel, editPanel, dataPre, renderE
         .on("mouseover", (event, d) => {
             infoPanel.style("display", "block");
             renderEventTableCallback(d, dataPre);
-            // Highlight corresponding event in the latest events table
             window.d3.select(`#latest-events-table tbody tr[data-event-id="${d.id}"]`).classed("highlighted", true);
         })
         .on("mouseout", (event, d) => {
-            // Remove highlight from corresponding event in the latest events table
             window.d3.select(`#latest-events-table tbody tr[data-event-id="${d.id}"]`).classed("highlighted", false);
         })
         .on("click", (event, d) => {
             panAndZoomToEvent(d);
 
-            // Open edit panel for stopwatch events
             if (d.bucket.startsWith('aw-stopwatch')) {
                 editPanel.style("display", "block");
-                editPanel.property("isSplitMode", false); // Initialize split mode flag
+                editPanel.property("isSplitMode", false);
                 renderEventEditPanelCallback(d, window.d3.select("#edit-event-data-table"), editPanel.property("isSplitMode"));
                 editPanel.property("originalEvent", d);
             }
@@ -152,7 +147,6 @@ export function renderEventPoints(events, infoPanel, editPanel, dataPre, renderE
  * @param {d3.Selection} editPanel - The D3 selection for the edit panel.
  */
 export function setupTimelineHoverInteraction(svg, editPanel) {
-    // Create the hover line and tooltip elements if they don't exist
     if (!hoverLine) {
         hoverLine = svg.append("line")
             .attr("class", HOVER_LINE_CLASS)
@@ -161,7 +155,7 @@ export function setupTimelineHoverInteraction(svg, editPanel) {
             .attr("stroke", "red")
             .attr("stroke-width", 1)
             .attr("pointer-events", "none")
-            .style("display", "none"); // Hidden by default
+            .style("display", "none");
     }
 
     if (!hoverTooltip) {
@@ -171,14 +165,14 @@ export function setupTimelineHoverInteraction(svg, editPanel) {
             .attr("fill", "black")
             .attr("font-size", "12px")
             .attr("pointer-events", "none")
-            .style("display", "none"); // Hidden by default
+            .style("display", "none");
     }
 
     svg.on("mousemove", (event) => {
         const activeInput = getActiveTimeInput();
         if (editPanel.style("display") === "block" && activeInput) {
             const [xCoord] = window.d3.pointer(event);
-            const currentXScale = window.d3.zoomTransform(svg.node()).rescaleX(xScale); // Get current scaled X-axis
+            const currentXScale = window.d3.zoomTransform(svg.node()).rescaleX(xScale);
             const hoveredTime = currentXScale.invert(xCoord);
 
             hoverLine.attr("x1", xCoord).attr("x2", xCoord).style("display", "block");
@@ -193,11 +187,10 @@ export function setupTimelineHoverInteraction(svg, editPanel) {
         const activeInput = getActiveTimeInput();
         if (editPanel.style("display") === "block" && activeInput) {
             const [xCoord] = window.d3.pointer(event);
-            const currentXScale = window.d3.zoomTransform(svg.node()).rescaleX(xScale); // Get current scaled X-axis
+            const currentXScale = window.d3.zoomTransform(svg.node()).rescaleX(xScale);
             const clickedTime = currentXScale.invert(xCoord);
             activeInput.value = toLocalISO(clickedTime);
 
-            // Manually dispatch an 'input' event to trigger the save button state check in ui.js
             activeInput.dispatchEvent(new Event('input', { bubbles: true }));
 
             hoverLine.style("display", "none");
@@ -205,7 +198,6 @@ export function setupTimelineHoverInteraction(svg, editPanel) {
         }
     });
 
-    // Hide hover elements when mouse leaves SVG
     svg.on("mouseleave", () => {
         hoverLine.style("display", "none");
         hoverTooltip.style("display", "none");
@@ -225,7 +217,6 @@ export function panAndZoomToEvent(d) {
     const currentTransform = window.d3.zoomTransform(svg.node());
     const currentXScale = currentTransform.rescaleX(xScale);
 
-    // For zero-duration events, just pan to center the view on the event time
     if (eventDurationMs <= 0) {
         const eventCenterPixels = currentXScale(eventStartTime);
         const timelineCenterPixels = width / 2;
@@ -240,16 +231,14 @@ export function panAndZoomToEvent(d) {
 
     const timelineWidth = width;
     const minPixelWidth = 50;
-    const maxPixelWidth = timelineWidth * 0.9; // Restore 90% rule
+    const maxPixelWidth = timelineWidth * 0.9;
 
-    // If event width is within a "good" range (50px to 90% of view), just pan to center it.
     if (eventPixelWidth >= minPixelWidth && eventPixelWidth <= maxPixelWidth) {
         const eventCenterTime = new Date(eventStartTime.getTime() + eventDurationMs / 2);
         const eventCenterPixels = currentXScale(eventCenterTime);
         const timelineCenterPixels = timelineWidth / 2;
         const dx = timelineCenterPixels - eventCenterPixels;
 
-        // Manually calculate the new transform to avoid potential `translateBy` issues.
         const newTransform = window.d3.zoomIdentity
             .translate(currentTransform.x + dx, currentTransform.y)
             .scale(currentTransform.k);
@@ -257,8 +246,7 @@ export function panAndZoomToEvent(d) {
         svg.transition().duration(750).call(zoomBehavior.transform, newTransform);
 
     } else {
-        // Otherwise, zoom so the event takes up 10% of the view.
-        const desiredVisibleDurationMs = eventDurationMs / 0.1; // Event is 10% of view
+        const desiredVisibleDurationMs = eventDurationMs / 0.1;
         const eventCenterTime = new Date(eventStartTime.getTime() + eventDurationMs / 2);
 
         const newStartTime = new Date(eventCenterTime.getTime() - desiredVisibleDurationMs / 2);
@@ -304,15 +292,12 @@ export function setupZoom() {
         .scaleExtent([1, 5000])
         .filter((event) => {
             const editPanel = window.d3.select("#event-edit-panel");
-            // Allow wheel events for zooming anytime.
             if (event.type === 'wheel') {
                 return true;
             }
-            // If the edit panel is open, block other mouse events to allow time selection.
             if (editPanel.style("display") === "block") {
                 return false;
             }
-            // Otherwise, allow default zoom drag behavior (no right-click).
             return !event.button;
         })
         .on("zoom", (event) => {
@@ -322,17 +307,16 @@ export function setupZoom() {
                 .tickValues(generateRelativeTimeTicks(newXScale, width))
                 .tickFormat(d => formatRelativeTime(d)));
 
-            // Re-select segments to ensure they are updated after data changes
             const segments = g.selectAll(`.${EVENT_SEGMENT_CLASS}`);
 
-            segments.attr("transform", d => `translate(${newXScale(d.timestamp)}, ${yScale(d.bucket) - BAR_HEIGHT / 2})`); // Update group transform
-            segments.select(".event-body") // Update width of the main rect inside the group
+            segments.attr("transform", d => `translate(${newXScale(d.timestamp)}, ${yScale(d.bucket) - BAR_HEIGHT / 2})`);
+            segments.select(".event-body")
                 .attr("width", d => {
                     const startTime = d.timestamp.getTime();
                     const endTime = startTime + d.duration * 1000;
                     return newXScale(new Date(endTime)) - newXScale(d.timestamp);
                 });
-            segments.select(".event-end-point") // Update position of the end point
+            segments.select(".event-end-point")
                 .attr("x", d => {
                     const startTime = d.timestamp.getTime();
                     const endTime = startTime + d.duration * 1000;
@@ -350,7 +334,7 @@ export function setupZoom() {
  */
 function resetHoverElements() {
     if (hoverLine) {
-        hoverLine.attr("y2", height); // Update height in case of resize
+        hoverLine.attr("y2", height);
         hoverLine.style("display", "none");
     }
     if (hoverTooltip) {
@@ -370,28 +354,20 @@ function resetHoverElements() {
  * @param {function} renderLatestEventsTableCallback - Callback to render latest events table.
  */
 export async function redrawTimeline(allEvents, visibleBuckets, infoPanel, editPanel, dataPre, renderEventTableCallback, renderEventEditPanelCallback, renderLatestEventsTableCallback, zoomToEventCallback) {
-    // Filter events based on currently visible buckets
     const filteredEvents = allEvents.filter(event => visibleBuckets.includes(event.bucket));
 
-    // Clear previous chart elements
     g.selectAll("*").remove();
 
-    // Re-setup chart with new data (especially for time extent and unique buckets)
-    // We need to re-calculate scales based on the *filtered* events to ensure correct rendering
     setupChart(filteredEvents, width, height);
 
-    // Reset hover elements after chart redraw
     resetHoverElements();
 
-    // Re-render points and setup zoom
     renderEventPoints(filteredEvents, infoPanel, editPanel, dataPre, renderEventTableCallback, renderEventEditPanelCallback);
 
-    setupZoom(); // Re-setup zoom to apply to new segments
+    setupZoom();
 
-    // Update latest events table
     renderLatestEventsTableCallback(filteredEvents, window.d3.select("#latest-events-table"), zoomToEventCallback);
 
-    // Restore zoom/pan state if possible
     const currentTransform = window.d3.zoomTransform(svg.node());
     if (currentTransform && currentTransform.k !== 1) {
         svg.call(zoomBehavior.transform, currentTransform);

@@ -2,7 +2,6 @@
 import { toLocalISO, formatDuration } from './utils.js';
 import { deleteEvent, createEvent } from './api.js';
 
-// Constants for selectors and configuration
 const INFO_PANEL_SELECTOR = "#event-info-panel";
 const EDIT_PANEL_SELECTOR = "#event-edit-panel";
 const EVENT_DATA_SELECTOR = "#event-data-table";
@@ -10,7 +9,6 @@ const DRAG_CURSOR_GRABBING = "grabbing";
 const DRAG_CURSOR_GRAB = "grab";
 const NOTIFICATION_CONTAINER_SELECTOR = "#notification-container";
 
-// Global variable to keep track of the currently active time input field
 let activeTimeInput = null;
 
 /**
@@ -29,7 +27,6 @@ export function showNotification(message, duration = 3000) {
         .attr("class", "notification-item")
         .text(message);
 
-    // Remove the notification after the specified duration
     setTimeout(() => {
         notification.remove();
     }, duration);
@@ -41,7 +38,7 @@ export function showNotification(message, duration = 3000) {
  * @param {d3.Selection} container - The D3 selection for the container to render the table into.
  */
 export function renderEventTable(eventData, container) {
-    container.html(""); // Clear previous content
+    container.html("");
 
     const table = container.append("table").attr("class", "event-attributes-table");
     const tbody = table.append("tbody");
@@ -51,20 +48,19 @@ export function renderEventTable(eventData, container) {
     tbody.append("tr").html(`<td>Time:</td><td>${eventData.timestamp.toLocaleString('en-US')}</td>`);
 
     let displayedDuration;
-    if (eventData.duration > 900) { // 15 minutes = 900 seconds
+    if (eventData.duration > 900) {
         displayedDuration = formatDuration(eventData.duration, false);
     } else {
         displayedDuration = formatDuration(eventData.duration);
     }
     tbody.append("tr").html(`<td>Duration:</td><td><span title="${eventData.duration.toFixed(2)} s">${displayedDuration}</span></td>`);
 
-    // Add data attributes
     if (eventData.data) {
         for (const key in eventData.data) {
             if (eventData.data.hasOwnProperty(key)) {
                 let value = eventData.data[key];
                 if (typeof value === 'object' && value !== null) {
-                    value = JSON.stringify(value, null, 2); // Pretty print nested objects
+                    value = JSON.stringify(value, null, 2);
                     tbody.append("tr").html(`<td>${key}:</td><td><pre>${value}</pre></td>`);
                 } else {
                     tbody.append("tr").html(`<td>${key}:</td><td>${value}</td>`);
@@ -81,27 +77,22 @@ export function renderEventTable(eventData, container) {
  * @param {function} zoomToEventCallback - Callback function to zoom/pan the timeline to a specific event.
  */
 export function renderLatestEventsTable(events, container, zoomToEventCallback) {
-    container.select("tbody").html(""); // Clear previous content
+    container.select("tbody").html("");
 
-    // Filter events to show only 'aw-stopwatch'
     const filteredEvents = events.filter(event => event.bucket === 'aw-stopwatch');
 
-    // Sort filtered events by timestamp in descending order to get the latest
-    const latestEvents = filteredEvents.sort((a, b) => b.timestamp - a.timestamp).slice(0, 15); // Get latest 10 events
+    const latestEvents = filteredEvents.sort((a, b) => b.timestamp - a.timestamp).slice(0, 15);
 
     latestEvents.forEach(event => {
         const row = container.select("tbody").append("tr")
-            .attr("data-event-id", event.id) // Add data attribute for event ID
+            .attr("data-event-id", event.id)
             .on("mouseover", function() {
-                // Highlight corresponding event on timeline
                 window.d3.select(`#event-${event.id}`).classed("highlighted", true);
             })
             .on("mouseout", function() {
-                // Remove highlight
                 window.d3.select(`#event-${event.id}`).classed("highlighted", false);
             })
             .on("click", function() {
-                // Zoom to the event's time range using the new function
                 if (zoomToEventCallback) {
                     zoomToEventCallback(event);
                 }
@@ -127,7 +118,6 @@ function setupPanelDrag(panel) {
     let isPositionedByLeft = false;
 
     panel.on("mousedown", (event) => {
-        // Prevent dragging if the click target is an input, button, or label
         const targetTagName = event.target.tagName;
         if (targetTagName === 'INPUT' || targetTagName === 'BUTTON' || targetTagName === 'LABEL') {
             return;
@@ -140,7 +130,6 @@ function setupPanelDrag(panel) {
             const computedStyle = window.getComputedStyle(panel.node());
             initialPanelTop = parseFloat(computedStyle.top);
 
-            // Determine if the panel is positioned by 'left' or 'right'
             if (computedStyle.left !== 'auto' && parseFloat(computedStyle.left) !== 0) {
                 initialPanelLeft = parseFloat(computedStyle.left);
                 isPositionedByLeft = true;
@@ -164,10 +153,10 @@ function setupPanelDrag(panel) {
 
         if (isPositionedByLeft) {
             panel.style("left", (initialPanelLeft + deltaX) + "px");
-            panel.style("right", "auto"); // Ensure right is not set
+            panel.style("right", "auto");
         } else {
             panel.style("right", (initialPanelRight - deltaX) + "px");
-            panel.style("left", "auto"); // Ensure left is not set
+            panel.style("left", "auto");
         }
     });
 
@@ -226,11 +215,10 @@ export function setupEscapeListener(infoPanel, editPanel, zoomPanel) {
         if (event.key === 'Escape') {
             if (editPanel.style('display') === 'block') {
                 editPanel.style('display', 'none');
-                activeTimeInput = null; // Reset active input
+                activeTimeInput = null;
             } else if (infoPanel.style('display') === 'block') {
                 infoPanel.style('display', 'none');
             } else {
-                // Toggle zoomPanel visibility
                 zoomPanel.style('display', zoomPanel.style('display') === 'none' ? 'flex' : 'none');
             }
         }
@@ -259,15 +247,14 @@ export function renderEventEditPanel(eventData, container, isSplitMode = false) 
     tbody.append("tr").html(`<td>Start Time:</td><td><input type="text" id="edit-start-time-input" class="time-input" value="${toLocalISO(startTime)}"></td>`);
     tbody.append("tr").html(`<td>End Time:</td><td><input type="text" id="edit-end-time-input" class="time-input" value="${toLocalISO(endTime)}"></td>`);
 
-    // Add focus/blur handlers to update activeTimeInput
     container.selectAll(".time-input")
         .on("focus", function() {
             activeTimeInput = this;
         });
 
     if (isSplitMode) {
-        const splitTime = new Date(startTime.getTime() + eventData.duration * 500); // Half duration
-        endTime = splitTime; // First event ends at split time
+        const splitTime = new Date(startTime.getTime() + eventData.duration * 500);
+        endTime = splitTime;
 
         tbody.select("#edit-end-time-input").property("value", toLocalISO(endTime));
 
@@ -275,7 +262,6 @@ export function renderEventEditPanel(eventData, container, isSplitMode = false) 
         tbody.append("tr").attr("class", "split-mode-field").html(`<td>Start Time 2:</td><td><input type="text" id="edit-start-time-2-input" class="time-input" value="${toLocalISO(splitTime)}"></td>`);
         tbody.append("tr").attr("class", "split-mode-field").html(`<td>End Time 2:</td><td><input type="text" id="edit-end-time-2-input" class="time-input" value="${toLocalISO(new Date(eventData.timestamp.getTime() + eventData.duration * 1000))}"></td>`);
 
-        // Add focus/blur handlers for split mode inputs
         container.selectAll(".split-mode-field .time-input")
             .on("focus", function() {
                 activeTimeInput = this;
@@ -296,13 +282,12 @@ export function renderEventEditPanel(eventData, container, isSplitMode = false) 
         }
     }
 
-    // --- Save button state management ---
     const saveButton = window.d3.select("#edit-save-button");
 
     if (isSplitMode) {
-        saveButton.property("disabled", false); // Always enabled in split mode
+        saveButton.property("disabled", false);
     } else {
-        saveButton.property("disabled", true); // Initially disable in normal edit mode
+        saveButton.property("disabled", true);
 
         const getFormValues = () => {
             const values = {
@@ -339,7 +324,7 @@ export function getActiveTimeInput() {
  */
 export function renderBucketFilterPanel(buckets, onFilterChange, visibleBuckets) {
     const bucketList = window.d3.select("#bucket-list");
-    bucketList.html(""); // Clear existing content
+    bucketList.html("");
 
     buckets.forEach(bucket => {
         if (!bucket || !bucket.id) {
@@ -350,7 +335,7 @@ export function renderBucketFilterPanel(buckets, onFilterChange, visibleBuckets)
         label.append("input")
             .attr("type", "checkbox")
             .attr("value", bucket.id)
-            .attr("checked", visibleBuckets.includes(bucket.id) ? true : null) // Check if already visible
+            .attr("checked", visibleBuckets.includes(bucket.id) ? true : null)
             .on("change", function() {
                 const bucketId = d3.select(this).attr("value");
                 if (this.checked) {
@@ -363,13 +348,12 @@ export function renderBucketFilterPanel(buckets, onFilterChange, visibleBuckets)
                         visibleBuckets.splice(index, 1);
                     }
                 }
-                onFilterChange(); // Trigger redraw
-                localStorage.setItem("visibleBuckets", JSON.stringify(visibleBuckets)); // Save current state
+                onFilterChange();
+                localStorage.setItem("visibleBuckets", JSON.stringify(visibleBuckets));
             });
         label.append("span").text(`${bucket.id} (${bucket.count})`);
     });
 
-    // Make the bucket filter panel visible and draggable
     window.d3.select("#bucket-filter-panel").style("display", "block");
     setupPanelDragging(window.d3.select("#bucket-filter-panel"));
 }
@@ -447,7 +431,7 @@ export function setupEditControls(editPanel, onSaveCallback, svg, zoomBehavior) 
         editPanel.property("isSplitMode", false);
         splitButton.property("disabled", false);
         editPanel.selectAll(".split-mode-field").remove();
-        activeTimeInput = null; // Reset active input
+        activeTimeInput = null;
     };
 
     cancelButton.on("click", () => {
@@ -476,11 +460,9 @@ export function setupEditControls(editPanel, onSaveCallback, svg, zoomBehavior) 
         editPanel.property("isSplitMode", true);
         renderEventEditPanel(originalEvent, window.d3.select("#edit-event-data-table"), true);
 
-        // Synchronize Start Time 2 with End Time 1 and trigger change detection
         window.d3.select("#edit-end-time-input").on("input", function() {
             const dependentInput = window.d3.select("#edit-start-time-2-input");
             dependentInput.property("value", this.value);
-            // Manually dispatch an 'input' event to trigger the save button state check
             dependentInput.node().dispatchEvent(new Event('input'));
         });
     });
@@ -546,12 +528,11 @@ export function setupEditControls(editPanel, onSaveCallback, svg, zoomBehavior) 
                 await createEvent(originalEvent.bucket, newEvent);
             }
 
-            // Delete the old event
             await deleteEvent(originalEvent.bucket, originalEvent.id);
 
             showNotification('Event updated successfully!');
             resetEditPanel();
-            await onSaveCallback(); // This will re-fetch and re-render, restoring zoom
+            await onSaveCallback();
 
             if (currentTransform && svg && zoomBehavior) {
                 svg.call(zoomBehavior.transform, currentTransform);

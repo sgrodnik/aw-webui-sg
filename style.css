@@ -1,6 +1,6 @@
 body {
     font-family: Arial, sans-serif;
-    margin: 0; /* Remove outer margins */
+    margin: 0;
     background-color: #ffffff;
     color: #333;
 }
@@ -23,12 +23,12 @@ body {
 }
 
 .container {
-    max-width: none; /* Remove width limit */
-    margin: 0; /* Remove automatic margins */
+    max-width: none;
+    margin: 0;
     background-color: #fff;
-    padding: 10px; /* Reduce inner padding */
-    border-radius: 0; /* Remove rounded corners */
-    box-shadow: none; /* Remove shadow */
+    padding: 10px;
+    border-radius: 0;
+    box-shadow: none;
 }
 
 h1 {
@@ -58,64 +58,64 @@ h1 {
 }
 
 .button-group .delete {
-    background-color: #dc3545; /* Red color for delete button */
+    background-color: #dc3545;
     color: white;
 }
 
 .button-group .delete:hover {
-    background-color: #c82333; /* Darker red on hover */
+    background-color: #c82333;
 }
 
 .button-group .split {
-    background-color: #17a2b8; /* Teal color for split button */
+    background-color: #17a2b8;
     color: white;
 }
 
 .button-group .split:hover {
-    background-color: #138496; /* Darker teal on hover */
+    background-color: #138496;
 }
 
 .button-group .split:disabled {
-    background-color: #cccccc; /* Grey out disabled button */
+    background-color: #cccccc;
     cursor: not-allowed;
 }
 
 .split-mode-field {
-    background-color: #f0f8ff; /* Light blue background for new fields */
+    background-color: #f0f8ff;
 }
 
 #zoom-panel {
     position: absolute;
-    top: 10px; /* Default top position */
-    left: 10px; /* Default left position */
+    top: 10px;
+    left: 10px;
     background-color: rgba(255, 255, 255, 0.9);
     border: 1px solid #ccc;
     border-radius: 5px;
-    padding: 10px; /* Adjusted padding */
+    padding: 10px;
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
     z-index: 1000;
-    cursor: grab; /* Indicate it's draggable */
-    display: flex; /* Make it a flex container */
-    flex-direction: row; /* Arrange items horizontally */
-    align-items: center; /* Align items vertically in the center */
-    justify-content: space-around; /* Distribute items evenly */
-    flex-wrap: wrap; /* Allow items to wrap to the next line */
-    visibility: hidden; /* Hidden by default to prevent jump */
+    cursor: grab;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-around;
+    flex-wrap: wrap;
+    visibility: hidden;
 }
 
 #zoom-panel h2 {
-    margin: 0 10px 0 0; /* Adjusted margin for horizontal layout */
+    margin: 0 10px 0 0;
     color: #0056b3;
     font-size: 18px;
-    white-space: nowrap; /* Prevent wrapping */
+    white-space: nowrap;
 }
 
 .zoom-option {
     display: flex;
     align-items: center;
-    margin: 0 10px; /* Adjusted margin for horizontal layout */
+    margin: 0 10px;
     font-size: 14px;
-    cursor: pointer; /* Indicate it's clickable */
+    cursor: pointer;
 }
 
 .zoom-option span {
@@ -123,19 +123,18 @@ h1 {
 }
 
 .zoom-option input[type="number"] {
-    width: 25px; /* Increased width for better usability */
+    width: 25px;
     margin: 0 5px;
     padding: 3px 5px;
     border: 1px solid #ccc;
     border-radius: 3px;
     font-size: 14px;
     text-align: center;
-    -moz-appearance: textfield; /* Hide arrows in Firefox */
+    -moz-appearance: textfield;
 }
 
 .zoom-option input[type="number"]::-webkit-outer-spin-button,
 .zoom-option input[type="number"]::-webkit-inner-spin-button {
-    /* -webkit-appearance: none; */ /* Re-enable default arrows */
     margin: 0;
 }
 
@@ -148,57 +147,56 @@ h1 {
 
 .timeline-container {
     width: 100%;
-    height: 200px; /* Reduce timeline height */
+    height: 200px;
     border: 1px solid #ccc;
-    border-radius: 0; /* Remove rounded corners */
-    overflow: hidden; /* Ensures SVG content stays within bounds */
+    border-radius: 0;
+    overflow: hidden;
     background-color: #ffffff;
 }
 
 #timeline-svg {
-    display: block; /* Removes extra space below SVG */
+    display: block;
 }
 
 .event-segment-group .event-body {
-    fill: rgb(211, 211, 211); /* Default color for event segments */
+    fill: rgb(211, 211, 211);
     cursor: pointer;
     transition: fill 0.2s ease, filter 0.2s ease;
 }
 
 .event-segment-group:hover .event-body {
-    filter: drop-shadow(0 0 3px rgba(0, 0, 0, 0.5)); /* Thin glow effect */
+    filter: drop-shadow(0 0 3px rgba(0, 0, 0, 0.5));
 }
 
 .event-segment-group.running .event-body {
-    fill: #ff6347; /* Tomato color */
+    fill: #ff6347;
 }
 
 .event-start-point,
 .event-end-point {
-    fill: black; /* Color of the dots */
+    fill: black;
 }
 
 .draggable-panel {
-    display: none; /* Hidden by default */
-    position: absolute; /* Allows for dragging */
+    display: none;
+    position: absolute;
     background-color: rgba(255, 255, 255, 0.9);
     border: 1px solid #ccc;
     border-radius: 5px;
     padding: 15px;
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
     z-index: 1000;
-    cursor: grab; /* Indicate it's draggable */
-    width: 300px; /* Fixed width for the panel */
-    max-height: 300px; /* Max height to allow scrolling if content is large */
-    overflow-y: auto; /* Enable vertical scrolling if content exceeds max-height */
+    cursor: grab;
+    width: 300px;
+    max-height: 300px;
+    overflow-y: auto;
 }
 
-/* New styles for the bucket filter panel */
 #bucket-filter-panel {
-    top: 500px; /* Initial position */
-    right: 40px; /* Initial position */
-    width: 270px; /* Slightly narrower than other panels */
-    max-height: 250px; /* Adjust max height as needed */
+    top: 500px;
+    right: 40px;
+    width: 270px;
+    max-height: 250px;
 }
 
 #bucket-filter-panel h2 {
@@ -213,7 +211,7 @@ h1 {
 }
 
 #bucket-list label {
-    display: block; /* Each checkbox on a new line */
+    display: block;
     margin-bottom: 8px;
     cursor: pointer;
 }
@@ -224,13 +222,13 @@ h1 {
 }
 
 #event-info-panel {
-    top: 300px; /* Initial position */
-    right: 40px; /* Initial position */
+    top: 300px;
+    right: 40px;
 }
 
 #event-edit-panel {
-    top: 300px; /* Initial position */
-    right: 440px; /* Initial position */
+    top: 300px;
+    right: 440px;
 }
 
 .draggable-panel h2 {
@@ -254,11 +252,10 @@ h1 {
 
 .event-attributes-table td:first-child {
     font-weight: bold;
-    width: 35%; /* Adjust as needed */
+    width: 35%;
     background-color: #f8f9fa;
 }
 
-/* Styles for axis */
 .tick line {
     stroke: #ccc;
 }
@@ -281,16 +278,16 @@ h1 {
 }
 
 .x-axis-top .tick text {
-    fill: #0056b3; /* Text color for the top axis */
+    fill: #0056b3;
     font-weight: bold;
 }
 
 #latest-events-table-container {
-    margin-top: 10px; /* Reduce top margin */
-    padding: 10px; /* Reduce inner padding */
+    margin-top: 10px;
+    padding: 10px;
     background-color: #fff;
-    border-radius: 0; /* Remove rounded corners */
-    box-shadow: none; /* Remove shadow */
+    border-radius: 0;
+    box-shadow: none;
 }
 
 #latest-events-table-container h2 {
@@ -327,24 +324,21 @@ h1 {
 }
 
 #latest-events-table tbody tr.highlighted {
-    background-color: #e9e9e9; /* Light grey for highlight, matching hover */
+    background-color: #e9e9e9;
 }
 
-/* New style for highlighted event segments on the timeline */
 .event-segment-group.highlighted .event-body {
-    filter: drop-shadow(0 0 5px rgba(0, 123, 255, 0.7)); /* Blue glow effect */
+    filter: drop-shadow(0 0 5px rgba(0, 123, 255, 0.7));
 }
 
-/* Styles for afk and non-afk events */
 .afk-event .event-body {
-    fill: #ffe6e6; /* Red for afk */
+    fill: #ffe6e6;
 }
 
 .non-afk-event .event-body {
-    fill: #deffdf; /* Green for non-afk */
+    fill: #deffdf;
 }
 
-/* Styles for notification container */
 #notification-container {
     position: fixed;
     bottom: 20px;
@@ -361,9 +355,9 @@ h1 {
     padding: 10px 15px;
     border-radius: 5px;
     box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
-    opacity: 0; /* Start invisible */
-    transform: translateY(20px); /* Start slightly below */
-    animation: fadeInOut 4s forwards; /* Animation for fade in and out */
+    opacity: 0;
+    transform: translateY(20px);
+    animation: fadeInOut 4s forwards;
 }
 
 @keyframes fadeInOut {

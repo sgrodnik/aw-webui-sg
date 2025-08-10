@@ -15,17 +15,16 @@ export function generateRelativeTimeTicks(currentXScale, width, now = new Date()
     let tickInterval;
     let tickStep;
 
-    // Determine the appropriate tick interval based on the visible duration
-    if (visibleDurationMs < 2 * 60 * 60 * 1000) { // Less than 2 hours
+    if (visibleDurationMs < 2 * 60 * 60 * 1000) {
         tickInterval = d3.timeMinute;
         if (visibleDurationMs < 30 * 60 * 1000) tickStep = 1;
         else if (visibleDurationMs < 60 * 60 * 1000) tickStep = 5;
         else tickStep = 10;
-    } else if (visibleDurationMs < 2 * 24 * 60 * 60 * 1000) { // Less than 2 days
+    } else if (visibleDurationMs < 2 * 24 * 60 * 60 * 1000) {
         tickInterval = d3.timeHour;
         tickStep = 1;
         if (visibleDurationMs > 12 * 60 * 60 * 1000) tickStep = 3;
-    } else { // More than 2 days
+    } else {
         tickInterval = d3.timeDay;
         tickStep = 1;
         if (visibleDurationMs > 7 * 24 * 60 * 60 * 1000) tickStep = 7;
@@ -41,13 +40,11 @@ export function generateRelativeTimeTicks(currentXScale, width, now = new Date()
     const offsetFromNow = (nowMs - currentTickMs) % intervalMs;
     currentTick = new Date(currentTickMs + offsetFromNow);
 
-    // Generate ticks backwards from 'now'
     while (currentTick.getTime() >= domain[0].getTime()) {
         ticks.unshift(currentTick);
         currentTick = tickInterval.offset(currentTick, -tickStep);
     }
 
-    // Generate ticks forwards from 'now'
     currentTick = tickInterval.offset(now, tickStep);
     while (currentTick.getTime() <= domain[1].getTime()) {
         ticks.push(currentTick);
@@ -102,10 +99,8 @@ export function formatAbsoluteTime(date, visibleDomain) {
     const minutes = String(date.getMinutes()).padStart(2, '0');
 
     if (visibleDurationMs < twoDaysInMs) {
-        // If zoomed in (less than 2 days visible), show only time
         return `${hours}:${minutes}`;
     } else {
-        // If zoomed out (2 days or more visible), show day and short month
         const day = String(date.getDate()).padStart(2, '0');
         const month = shortMonthNames[date.getMonth()];
         return `${day} ${month}`;

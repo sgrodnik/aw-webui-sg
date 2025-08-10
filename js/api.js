@@ -12,7 +12,7 @@ export async function fetchEventCountForBucket(bucketName) {
             throw new Error(`HTTP error! status: ${response.status}`);
         }
         const data = await response.json();
-        return data; // The count is the response itself
+        return data;
     } catch (error) {
         console.error(`Failed to fetch event count for bucket ${bucketName}:`, error);
         return 0;
@@ -58,13 +58,11 @@ export async function fetchEventsForBucket(bucketName) {
         }
         const events = await response.json();
 
-        // Process events: add bucket name and convert timestamp
         const processedEvents = events.map(d => {
-            // Find and update the current running event
             if (d.data.running === true && d.duration === 0) {
                 const now = new Date();
                 const eventTimestamp = new Date(d.timestamp);
-                d.duration = (now - eventTimestamp) / 1000; // Duration in seconds
+                d.duration = (now - eventTimestamp) / 1000;
             }
             return {
                 ...d,
@@ -84,24 +82,22 @@ export async function fetchEventsForBucket(bucketName) {
  * @returns {Promise<Array<Object>>} A promise that resolves to an array of event objects from all buckets.
  */
 export async function fetchAllEvents() {
-    const buckets = await fetchBuckets(); // This now returns objects with id and count
+    const buckets = await fetchBuckets();
     if (buckets.length === 0) {
         console.warn("No buckets found.");
         return [];
     }
 
-    const relevantBucketIds = buckets.map(b => b.id); // Extract IDs for fetching events
+    const relevantBucketIds = buckets.map(b => b.id);
 
     if (relevantBucketIds.length === 0) {
         console.warn("No buckets found after filtering (if any).");
         return [];
     }
 
-    // Fetch events for all relevant buckets in parallel
     const eventPromises = relevantBucketIds.map(bucketName => fetchEventsForBucket(bucketName));
     const allEvents = await Promise.all(eventPromises);
 
-    // Flatten the array of arrays into a single array of events
     const flattenedEvents = allEvents.flat();
 
     if (flattenedEvents.length === 0) {
