@@ -75,6 +75,7 @@ export function renderEventPoints(events, infoPanel, editPanel, dataPre, renderE
     const segments = g.selectAll(`.${EVENT_SEGMENT_CLASS}`)
         .data(events)
         .enter().append("g")
+        .attr("id", d => `event-${d.id}`) // Add unique ID to each event group
         .attr("class", d => {
             let classes = [EVENT_SEGMENT_CLASS];
             if (d.data.running) {

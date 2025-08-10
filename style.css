@@ -323,6 +323,12 @@ h1 {
 
 #latest-events-table tbody tr:hover {
     background-color: #e9e9e9;
+    cursor: pointer;
+}
+
+/* New style for highlighted event segments on the timeline */
+.event-segment-group.highlighted .event-body {
+    filter: drop-shadow(0 0 5px rgba(0, 123, 255, 0.7)); /* Blue glow effect */
 }
 
 /* Styles for afk and non-afk events */

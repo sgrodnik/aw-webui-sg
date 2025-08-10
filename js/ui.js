@@ -1,6 +1,7 @@
 
 import { toLocalISO, formatDuration } from './utils.js';
 import { deleteEvent, createEvent } from './api.js';
+import { zoomToRange } from './timeline.js'; // Import zoomToRange
 
 // Constants for selectors and configuration
 const INFO_PANEL_SELECTOR = "#event-info-panel";
@@ -78,8 +79,9 @@ export function renderEventTable(eventData, container) {
  * Renders the latest events table.
  * @param {Array<Object>} events - The array of event data.
  * @param {d3.Selection} container - The D3 selection for the table container.
+ * @param {function} zoomToRangeCallback - Callback function to zoom the timeline to a specific range.
  */
-export function renderLatestEventsTable(events, container) {
+export function renderLatestEventsTable(events, container, zoomToRangeCallback) {
     container.select("tbody").html(""); // Clear previous content
 
     // Filter events to show only 'aw-stopwatch'
@@ -89,7 +91,23 @@ export function renderLatestEventsTable(events, container) {
     const latestEvents = filteredEvents.sort((a, b) => b.timestamp - a.timestamp).slice(0, 15); // Get latest 10 events
 
     latestEvents.forEach(event => {
-        const row = container.select("tbody").append("tr");
+        const row = container.select("tbody").append("tr")
+            .attr("data-event-id", event.id) // Add data attribute for event ID
+            .on("mouseover", function() {
+                // Highlight corresponding event on timeline
+                window.d3.select(`#event-${event.id}`).classed("highlighted", true);
+            })
+            .on("mouseout", function() {
+                // Remove highlight
+                window.d3.select(`#event-${event.id}`).classed("highlighted", false);
+            })
+            .on("click", function() {
+                // Zoom to the event's time range
+                const startTime = event.timestamp;
+                const endTime = new Date(event.timestamp.getTime() + event.duration * 1000);
+                zoomToRangeCallback(startTime, endTime);
+            });
+
         row.append("td").text(event.timestamp.toLocaleString('en-US'));
         const status = event.data.running ? " ⏳" : "";
         row.append("td").text(formatDuration(event.duration) + status);

@@ -81,7 +81,7 @@ async function main() {
 
     // Render latest events table
     const latestEventsTable = window.d3.select("#latest-events-table");
-    renderLatestEventsTable(allEventsData, latestEventsTable);
+    renderLatestEventsTable(allEventsData, latestEventsTable, zoomToRange); // Pass zoomToRange here
 
     // --- UI Interactions Setup ---
     setupZoomControls(svg, zoomToRange);
@@ -90,7 +90,7 @@ async function main() {
     setupEditControls(editPanel, async () => {
         // Re-fetch all events (including potential new ones from edits) and redraw
         allEventsData = await Promise.all(visibleBuckets.map(bucketName => fetchEventsForBucket(bucketName))).then(arrays => arrays.flat());
-        await redrawTimeline(allEventsData, visibleBuckets, infoPanel, editPanel, dataPre, renderEventTable, renderEventEditPanel, renderLatestEventsTable);
+        await redrawTimeline(allEventsData, visibleBuckets, infoPanel, editPanel, dataPre, renderEventTable, renderEventEditPanel, renderLatestEventsTable, zoomToRange); // Pass zoomToRange here
     }, svg, zoomBehavior);
 
     // Setup timeline hover interaction for time input
