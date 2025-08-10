@@ -103,7 +103,10 @@ export function renderEventPoints(events, infoPanel, editPanel, dataPre, renderE
             window.d3.select(`#latest-events-table tbody tr[data-event-id="${d.id}"]`).classed("highlighted", false);
         })
         .on("click", (event, d) => {
-            if (d.bucket === 'aw-stopwatch') {
+            panAndZoomToEvent(d);
+
+            // Open edit panel for stopwatch events
+            if (d.bucket.startsWith('aw-stopwatch')) {
                 editPanel.style("display", "block");
                 editPanel.property("isSplitMode", false); // Initialize split mode flag
                 renderEventEditPanelCallback(d, window.d3.select("#edit-event-data-table"), editPanel.property("isSplitMode"));
@@ -210,6 +213,62 @@ export function setupTimelineHoverInteraction(svg, editPanel) {
 }
 
 /**
+ * Pans and zooms the timeline to focus on a specific event, with adjusted zoom levels.
+ * If the event is already reasonably sized on screen, it only pans.
+ * Otherwise, it zooms so the event takes up roughly 10% of the timeline width.
+ * @param {Object} d - The event data object.
+ */
+export function panAndZoomToEvent(d) {
+    const eventStartTime = d.timestamp;
+    const eventDurationMs = d.duration * 1000;
+
+    const currentTransform = window.d3.zoomTransform(svg.node());
+    const currentXScale = currentTransform.rescaleX(xScale);
+
+    // For zero-duration events, just pan to center the view on the event time
+    if (eventDurationMs <= 0) {
+        const eventCenterPixels = currentXScale(eventStartTime);
+        const timelineCenterPixels = width / 2;
+        const dx = timelineCenterPixels - eventCenterPixels;
+
+        svg.transition().duration(750).call(zoomBehavior.translateBy, dx, 0);
+        return;
+    }
+
+    const eventEndTime = new Date(eventStartTime.getTime() + eventDurationMs);
+    const eventPixelWidth = currentXScale(eventEndTime) - currentXScale(eventStartTime);
+
+    const timelineWidth = width;
+    const minPixelWidth = 50;
+    const maxPixelWidth = timelineWidth * 0.9; // Restore 90% rule
+
+    // If event width is within a "good" range (50px to 90% of view), just pan to center it.
+    if (eventPixelWidth >= minPixelWidth && eventPixelWidth <= maxPixelWidth) {
+        const eventCenterTime = new Date(eventStartTime.getTime() + eventDurationMs / 2);
+        const eventCenterPixels = currentXScale(eventCenterTime);
+        const timelineCenterPixels = timelineWidth / 2;
+        const dx = timelineCenterPixels - eventCenterPixels;
+
+        // Manually calculate the new transform to avoid potential `translateBy` issues.
+        const newTransform = window.d3.zoomIdentity
+            .translate(currentTransform.x + dx, currentTransform.y)
+            .scale(currentTransform.k);
+
+        svg.transition().duration(750).call(zoomBehavior.transform, newTransform);
+
+    } else {
+        // Otherwise, zoom so the event takes up 10% of the view.
+        const desiredVisibleDurationMs = eventDurationMs / 0.1; // Event is 10% of view
+        const eventCenterTime = new Date(eventStartTime.getTime() + eventDurationMs / 2);
+
+        const newStartTime = new Date(eventCenterTime.getTime() - desiredVisibleDurationMs / 2);
+        const newEndTime = new Date(eventCenterTime.getTime() + desiredVisibleDurationMs / 2);
+
+        zoomToRange(newStartTime, newEndTime);
+    }
+}
+
+/**
  * Zooms and pans the timeline to a specific date range.
  * @param {Date} startDate - The start date of the range.
  * @param {Date} endDate - The end date of the range.
@@ -310,7 +369,7 @@ function resetHoverElements() {
  * @param {function} renderEventEditPanelCallback - Callback to render event edit panel.
  * @param {function} renderLatestEventsTableCallback - Callback to render latest events table.
  */
-export async function redrawTimeline(allEvents, visibleBuckets, infoPanel, editPanel, dataPre, renderEventTableCallback, renderEventEditPanelCallback, renderLatestEventsTableCallback) {
+export async function redrawTimeline(allEvents, visibleBuckets, infoPanel, editPanel, dataPre, renderEventTableCallback, renderEventEditPanelCallback, renderLatestEventsTableCallback, zoomToEventCallback) {
     // Filter events based on currently visible buckets
     const filteredEvents = allEvents.filter(event => visibleBuckets.includes(event.bucket));
 
@@ -330,7 +389,7 @@ export async function redrawTimeline(allEvents, visibleBuckets, infoPanel, editP
     setupZoom(); // Re-setup zoom to apply to new segments
 
     // Update latest events table
-    renderLatestEventsTableCallback(filteredEvents, window.d3.select("#latest-events-table"));
+    renderLatestEventsTableCallback(filteredEvents, window.d3.select("#latest-events-table"), zoomToEventCallback);
 
     // Restore zoom/pan state if possible
     const currentTransform = window.d3.zoomTransform(svg.node());

@@ -1,6 +1,6 @@
 
 import { fetchBuckets, fetchEventsForBucket, fetchAllEvents } from './api.js';
-import { setupChart, renderEventPoints, setupZoom, zoomToRange, redrawTimeline, svg, g, xScale, yScale, xAxisGroup, xAxisTopGroup, timeExtent, zoomBehavior, width, height } from './timeline.js';
+import { setupChart, renderEventPoints, setupZoom, zoomToRange, redrawTimeline, panAndZoomToEvent, svg, g, xScale, yScale, xAxisGroup, xAxisTopGroup, timeExtent, zoomBehavior, width, height } from './timeline.js';
 import { renderEventTable, renderLatestEventsTable, setupPanelDragging, loadPanelPosition, setupEscapeListener, renderEventEditPanel, renderBucketFilterPanel, setupZoomControls, setupEditControls, getActiveTimeInput } from './ui.js';
 import { setupTimelineHoverInteraction } from './timeline.js';
 
@@ -51,14 +51,14 @@ async function main() {
     // Render bucket filter panel and set up its change handler
     const bucketFilterPanel = window.d3.select("#bucket-filter-panel");
     renderBucketFilterPanel(allBucketsWithCounts, async () => {
-        // When filter changes, redraw the timeline
-        await redrawTimeline(allEventsData, visibleBuckets, window.d3.select(INFO_PANEL_SELECTOR), window.d3.select(EDIT_PANEL_SELECTOR), window.d3.select(EVENT_DATA_SELECTOR), renderEventTable, renderEventEditPanel, renderLatestEventsTable);
-        // Re-render bucket filter panel to update counts if needed (e.g., after event creation/deletion)
-        const updatedBucketsWithCounts = await fetchBuckets();
-        renderBucketFilterPanel(updatedBucketsWithCounts, async () => {
-            await redrawTimeline(allEventsData, visibleBuckets, window.d3.select(INFO_PANEL_SELECTOR), window.d3.select(EDIT_PANEL_SELECTOR), window.d3.select(EVENT_DATA_SELECTOR), renderEventTable, renderEventEditPanel, renderLatestEventsTable);
-        }, visibleBuckets);
+    // When filter changes, redraw the timeline
+    await redrawTimeline(allEventsData, visibleBuckets, window.d3.select(INFO_PANEL_SELECTOR), window.d3.select(EDIT_PANEL_SELECTOR), window.d3.select(EVENT_DATA_SELECTOR), renderEventTable, renderEventEditPanel, renderLatestEventsTable, panAndZoomToEvent);
+    // Re-render bucket filter panel to update counts if needed (e.g., after event creation/deletion)
+    const updatedBucketsWithCounts = await fetchBuckets();
+    renderBucketFilterPanel(updatedBucketsWithCounts, async () => {
+        await redrawTimeline(allEventsData, visibleBuckets, window.d3.select(INFO_PANEL_SELECTOR), window.d3.select(EDIT_PANEL_SELECTOR), window.d3.select(EVENT_DATA_SELECTOR), renderEventTable, renderEventEditPanel, renderLatestEventsTable, panAndZoomToEvent);
     }, visibleBuckets);
+}, visibleBuckets);
 
     // Fetch initial events for all visible buckets
     allEventsData = await Promise.all(visibleBuckets.map(bucketId => fetchEventsForBucket(bucketId))).then(arrays => arrays.flat());
@@ -79,21 +79,21 @@ async function main() {
     renderEventPoints(allEventsData, infoPanel, editPanel, dataPre, renderEventTable, renderEventEditPanel);
     setupZoom();
 
-    // Render latest events table
-    const latestEventsTable = window.d3.select("#latest-events-table");
-    renderLatestEventsTable(allEventsData, latestEventsTable, zoomToRange); // Pass zoomToRange here
+// Render latest events table
+const latestEventsTable = window.d3.select("#latest-events-table");
+renderLatestEventsTable(allEventsData, latestEventsTable, panAndZoomToEvent); // Pass panAndZoomToEvent here
 
-    // --- UI Interactions Setup ---
-    setupZoomControls(svg, zoomToRange);
+// --- UI Interactions Setup ---
+setupZoomControls(svg, zoomToRange);
     setupPanelDragging(infoPanel, editPanel, zoomPanel, window.d3.select("#bucket-filter-panel"));
     setupEscapeListener(infoPanel, editPanel, zoomPanel);
-    setupEditControls(editPanel, async () => {
-        // Re-fetch all events (including potential new ones from edits) and redraw
-        allEventsData = await Promise.all(visibleBuckets.map(bucketName => fetchEventsForBucket(bucketName))).then(arrays => arrays.flat());
-        await redrawTimeline(allEventsData, visibleBuckets, infoPanel, editPanel, dataPre, renderEventTable, renderEventEditPanel, renderLatestEventsTable, zoomToRange); // Pass zoomToRange here
-    }, svg, zoomBehavior);
+setupEditControls(editPanel, async () => {
+    // Re-fetch all events (including potential new ones from edits) and redraw
+    allEventsData = await Promise.all(visibleBuckets.map(bucketName => fetchEventsForBucket(bucketName))).then(arrays => arrays.flat());
+    await redrawTimeline(allEventsData, visibleBuckets, infoPanel, editPanel, dataPre, renderEventTable, renderEventEditPanel, renderLatestEventsTable, panAndZoomToEvent); // Pass panAndZoomToEvent here
+}, svg, zoomBehavior);
 
-    // Setup timeline hover interaction for time input
+// Setup timeline hover interaction for time input
     setupTimelineHoverInteraction(svg, editPanel); // No need to pass xScale here anymore
 
     // Initial zoom

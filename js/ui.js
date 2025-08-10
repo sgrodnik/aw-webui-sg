@@ -1,7 +1,6 @@
 
 import { toLocalISO, formatDuration } from './utils.js';
 import { deleteEvent, createEvent } from './api.js';
-import { zoomToRange } from './timeline.js'; // Import zoomToRange
 
 // Constants for selectors and configuration
 const INFO_PANEL_SELECTOR = "#event-info-panel";
@@ -79,9 +78,9 @@ export function renderEventTable(eventData, container) {
  * Renders the latest events table.
  * @param {Array<Object>} events - The array of event data.
  * @param {d3.Selection} container - The D3 selection for the table container.
- * @param {function} zoomToRangeCallback - Callback function to zoom the timeline to a specific range.
+ * @param {function} zoomToEventCallback - Callback function to zoom/pan the timeline to a specific event.
  */
-export function renderLatestEventsTable(events, container, zoomToRangeCallback) {
+export function renderLatestEventsTable(events, container, zoomToEventCallback) {
     container.select("tbody").html(""); // Clear previous content
 
     // Filter events to show only 'aw-stopwatch'
@@ -102,10 +101,10 @@ export function renderLatestEventsTable(events, container, zoomToRangeCallback) 
                 window.d3.select(`#event-${event.id}`).classed("highlighted", false);
             })
             .on("click", function() {
-                // Zoom to the event's time range
-                const startTime = event.timestamp;
-                const endTime = new Date(event.timestamp.getTime() + event.duration * 1000);
-                zoomToRangeCallback(startTime, endTime);
+                // Zoom to the event's time range using the new function
+                if (zoomToEventCallback) {
+                    zoomToEventCallback(event);
+                }
             });
 
         row.append("td").text(event.timestamp.toLocaleString('en-US'));
