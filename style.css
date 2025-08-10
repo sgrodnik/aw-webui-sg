@@ -326,6 +326,10 @@ h1 {
     cursor: pointer;
 }
 
+#latest-events-table tbody tr.highlighted {
+    background-color: #e9e9e9; /* Light grey for highlight, matching hover */
+}
+
 /* New style for highlighted event segments on the timeline */
 .event-segment-group.highlighted .event-body {
     filter: drop-shadow(0 0 5px rgba(0, 123, 255, 0.7)); /* Blue glow effect */

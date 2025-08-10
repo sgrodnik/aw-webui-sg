@@ -95,6 +95,12 @@ export function renderEventPoints(events, infoPanel, editPanel, dataPre, renderE
         .on("mouseover", (event, d) => {
             infoPanel.style("display", "block");
             renderEventTableCallback(d, dataPre);
+            // Highlight corresponding event in the latest events table
+            window.d3.select(`#latest-events-table tbody tr[data-event-id="${d.id}"]`).classed("highlighted", true);
+        })
+        .on("mouseout", (event, d) => {
+            // Remove highlight from corresponding event in the latest events table
+            window.d3.select(`#latest-events-table tbody tr[data-event-id="${d.id}"]`).classed("highlighted", false);
         })
         .on("click", (event, d) => {
             if (d.bucket === 'aw-stopwatch') {
@@ -319,20 +325,7 @@ export async function redrawTimeline(allEvents, visibleBuckets, infoPanel, editP
     resetHoverElements();
 
     // Re-render points and setup zoom
-    let segments = renderEventPoints(filteredEvents, infoPanel, editPanel, dataPre, renderEventTableCallback, renderEventEditPanelCallback);
-    // Re-assign click and mouseover handlers with correct callbacks
-    segments.on("mouseover", (event, d) => {
-        infoPanel.style("display", "block");
-        renderEventTableCallback(d, dataPre);
-    })
-    .on("click", (event, d) => {
-        if (d.bucket === 'aw-stopwatch') {
-            editPanel.style("display", "block");
-            editPanel.property("isSplitMode", false); // Initialize split mode flag
-            renderEventEditPanelCallback(d, window.d3.select("#edit-event-data-table"), editPanel.property("isSplitMode"));
-            editPanel.property("originalEvent", d);
-        }
-    });
+    renderEventPoints(filteredEvents, infoPanel, editPanel, dataPre, renderEventTableCallback, renderEventEditPanelCallback);
 
     setupZoom(); // Re-setup zoom to apply to new segments
 
