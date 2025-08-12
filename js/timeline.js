@@ -1,4 +1,4 @@
-import { formatAbsoluteTime, formatRelativeTime, generateRelativeTimeTicks, toLocalISO } from './utils.js';
+import { formatAbsoluteTime, formatRelativeTime, generateRelativeTimeTicks, toLocalISO, formatDuration } from './utils.js';
 import { getActiveTimeInput } from './ui.js';
 
 const SVG_SELECTOR = "#timeline-svg";
@@ -8,7 +8,7 @@ const BAR_HEIGHT = 10;
 const POINT_SIZE = 1;
 const HOVER_LINE_CLASS = "hover-line";
 const HOVER_TOOLTIP_CLASS = "hover-tooltip";
-const TOOLTIP_OFFSET_Y = 25;
+const TOOLTIP_OFFSET_Y = 35;
 
 export let svg, g, xScale, yScale, xAxisGroup, xAxisTopGroup, timeExtent, zoomBehavior;
 export let width, height;
@@ -180,10 +180,96 @@ export function setupTimelineHoverInteraction(svg, editPanel) {
             const hoveredTime = currentXScale.invert(xCoord);
 
             hoverLine.attr("x1", xCoord).attr("x2", xCoord).style("display", "block");
-            hoverTooltip.attr("x", xCoord).attr("y", TOOLTIP_OFFSET_Y).text(toLocalISO(hoveredTime)).style("display", "block");
+
+            let tooltipText = toLocalISO(hoveredTime);
+            let secondLineText = "";
+
+            const originalEvent = editPanel.property("originalEvent");
+            const isSplitMode = editPanel.property("isSplitMode");
+
+            if (originalEvent) {
+                const origDur = originalEvent.duration;
+
+                // Get current values from inputs, default to original event times if inputs are not yet rendered or active
+                // Use .empty() to check if the selection is empty (element not found)
+                let currentStartTime = new Date(window.d3.select("#edit-start-time-input").empty()
+                    ? originalEvent.timestamp
+                    : window.d3.select("#edit-start-time-input").property("value"));
+                let currentEndTime = new Date(window.d3.select("#edit-end-time-input").empty()
+                    ? new Date(originalEvent.timestamp.getTime() + originalEvent.duration * 1000)
+                    : window.d3.select("#edit-end-time-input").property("value"));
+                let currentStartTime2 = new Date(window.d3.select("#edit-start-time-2-input").empty()
+                    ? new Date(originalEvent.timestamp.getTime() + originalEvent.duration * 500)
+                    : window.d3.select("#edit-start-time-2-input").property("value"));
+                let currentEndTime2 = new Date(window.d3.select("#edit-end-time-2-input").empty()
+                    ? new Date(originalEvent.timestamp.getTime() + originalEvent.duration * 1000)
+                    : window.d3.select("#edit-end-time-2-input").property("value"));
+
+                const origNewDur1 = (currentEndTime.getTime() - currentStartTime.getTime()) / 1000;
+                const origNewDur2 = (currentEndTime2.getTime() - currentStartTime2.getTime()) / 1000;
+
+                // Update the relevant time based on active input, if activeInput is not null
+                if (activeInput) {
+                    if (activeInput.id === "edit-start-time-input") {
+                        currentStartTime = hoveredTime;
+                    } else if (activeInput.id === "edit-end-time-input") {
+                        currentEndTime = hoveredTime;
+                        currentStartTime2 = hoveredTime; // This is the key change for split mode
+                    } else if (activeInput.id === "edit-start-time-2-input") {
+                        currentStartTime2 = hoveredTime;
+                    } else if (activeInput.id === "edit-end-time-2-input") {
+                        currentEndTime2 = hoveredTime;
+                    }
+                }
+
+                if (isSplitMode) {
+                    const dur1 = (currentEndTime.getTime() - currentStartTime.getTime()) / 1000;
+                    const dur2 = (currentEndTime2.getTime() - currentStartTime2.getTime()) / 1000;
+
+                    if (!isNaN(dur1) && !isNaN(dur2)) {
+                        if (activeInput.id === "edit-start-time-input") {
+                            secondLineText = `${formatTooltipTime(dur1, origNewDur1)}`;
+                        } else if (activeInput.id === "edit-end-time-input") {
+                            secondLineText = `${formatTooltipTime(dur1, origNewDur1)} | ${formatTooltipTime(dur2, origNewDur2)}`;
+                        } else if (activeInput.id === "edit-start-time-2-input" || activeInput.id === "edit-end-time-2-input") {
+                            secondLineText = `${formatTooltipTime(dur2, origNewDur2)}`;
+                        }
+                    }
+                } else {
+                    const newDuration = (currentEndTime.getTime() - currentStartTime.getTime()) / 1000;
+
+                    if (!isNaN(newDuration)) {
+                        secondLineText = formatTooltipTime(newDuration, origDur);
+                    }
+                }
+            }
+
+            hoverTooltip.html(""); // Clear previous content
+            hoverTooltip.append("tspan")
+                .attr("x", xCoord)
+                .attr("dy", "0em") // First line
+                .text(tooltipText);
+
+            if (secondLineText) {
+                hoverTooltip.append("tspan")
+                    .attr("x", xCoord)
+                    .attr("dy", "1.2em") // Second line, offset by 1.2em
+                    .text(secondLineText);
+            }
+
+            hoverTooltip.attr("y", TOOLTIP_OFFSET_Y).style("display", "block");
         } else {
             hoverLine.style("display", "none");
             hoverTooltip.style("display", "none");
+        }
+
+        function formatTooltipTime(newDuration, originalDuration) {
+            const delta = newDuration - originalDuration;
+            const orig = formatDuration(originalDuration);
+            const operator = delta >= 0 ? "+" : "-";
+            const d = formatDuration(Math.abs(delta));
+            const newD = formatDuration(newDuration);
+            return `${orig} ${operator} ${d} = ${newD}`;
         }
     });
 

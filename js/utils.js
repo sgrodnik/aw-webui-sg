@@ -124,14 +124,22 @@ export function toLocalISO(date) {
 }
 
 export function formatDuration(seconds, includeSeconds = true) {
-    const hours = Math.floor(seconds / 3600);
-    const minutes = Math.floor((seconds % 3600) / 60);
-    const remainingSeconds = Math.floor(seconds % 60);
+    const h = Math.floor(seconds / 3600);
+    const m = Math.floor((seconds % 3600) / 60);
+    const s = Math.floor(seconds % 60);
 
-    let result = "";
-    if (hours > 0) result += hours + "h ";
-    if (minutes > 0) result += minutes + "m ";
-    if (includeSeconds) result += remainingSeconds + "s";
-
-    return result.trim();
+    if (h > 0) {
+        const paddedM = String(m).padStart(2, '0');
+        const paddedS = String(s).padStart(2, '0');
+        return includeSeconds ? `${h}h ${paddedM}m ${paddedS}s` : `${h}h ${paddedM}m`;
+    }
+    if (m > 0) {
+        const paddedS = String(s).padStart(2, '0');
+        return includeSeconds ? `${m}m ${paddedS}s` : `${m}m`;
+    }
+    if (includeSeconds) {
+        const paddedS = String(s).padStart(2, '0');
+        return `${paddedS}s`;
+    }
+    return "";
 }
