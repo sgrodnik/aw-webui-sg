@@ -167,18 +167,38 @@ h1 {
     display: block;
 }
 
-.event-segment-group .event-body {
-    fill: rgb(211, 211, 211);
+.event-body {
     cursor: pointer;
     transition: fill 0.2s ease, filter 0.2s ease;
+}
+
+.event-body.default-event {
+    fill: rgb(211, 211, 211);
 }
 
 .event-segment-group:hover .event-body {
     filter: drop-shadow(0 0 3px rgba(0, 0, 0, 0.5));
 }
 
-.event-segment-group.running .event-body {
+/* --- Stopwatch ActivitySegment Styles --- */
+.event-segment-rect.active {
+    fill: #d3d3d3;
+    /* lightgray */
+}
+
+.event-segment-rect.afk {
+    fill: #ffe6e6;
+    /* light red */
+}
+
+.event-segment-rect.not-afk {
+    fill: #deffdf;
+    /* light green */
+}
+
+.event-segment-rect.running {
     fill: #ff6347;
+    /* tomato */
 }
 
 .event-start-point,
@@ -380,11 +400,12 @@ h1 {
     filter: drop-shadow(0 0 5px rgba(0, 123, 255, 0.7));
 }
 
-.afk-event .event-body {
+/* --- AFK Bucket Event Styles (for the separate AFK timeline) --- */
+.afk-event {
     fill: #ffe6e6;
 }
 
-.non-afk-event .event-body {
+.non-afk-event {
     fill: #deffdf;
 }
 

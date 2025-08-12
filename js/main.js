@@ -1,8 +1,9 @@
 
-import { fetchBuckets, fetchEventsForBucket, fetchAllEvents, createEvent } from './api.js';
+import { fetchBuckets, fetchEventsForBucket, createEvent, afkBucketId } from './api.js';
 import { setupChart, renderEventPoints, setupZoom, zoomToRange, redrawTimeline, panAndZoomToEvent, svg, g, xScale, yScale, xAxisGroup, xAxisTopGroup, timeExtent, zoomBehavior, width, height } from './timeline.js';
 import { renderEventTable, renderLatestEventsTable, setupPanelDragging, loadPanelPosition, setupEscapeListener, renderEventEditPanel, renderBucketFilterPanel, setupZoomControls, setupEditControls, getActiveTimeInput, showNotification } from './ui.js';
 import { setupTimelineHoverInteraction } from './timeline.js';
+import { calculateActivitySegments } from './events.js';
 
 const TIMELINE_CONTAINER_SELECTOR = ".timeline-container";
 const INFO_PANEL_SELECTOR = "#event-info-panel";
@@ -13,6 +14,21 @@ const CREATE_EVENT_BUTTON_SELECTOR = "#create-event-button";
 
 let allEventsData = [];
 let visibleBuckets = [];
+
+async function loadAndProcessEvents(buckets) {
+    const allEvents = await Promise.all(buckets.map(bucketId => fetchEventsForBucket(bucketId))).then(arrays => arrays.flat());
+
+    const stopwatchEvents = allEvents.filter(e => e.bucket.startsWith('aw-stopwatch'));
+    const afkEvents = allEvents.filter(e => e.bucket === afkBucketId);
+
+    const processedEvents = calculateActivitySegments(stopwatchEvents, afkEvents);
+
+    // Return all events, but with stopwatch events now containing segments
+    return allEvents.map(event => {
+        const processed = processedEvents.find(p => p.id === event.id);
+        return processed ? processed : event;
+    });
+}
 
 async function main() {
     const zoomPanel = window.d3.select("#zoom-panel");
@@ -47,14 +63,16 @@ async function main() {
 
     const bucketFilterPanel = window.d3.select("#bucket-filter-panel");
     renderBucketFilterPanel(allBucketsWithCounts, async () => {
+        allEventsData = await loadAndProcessEvents(visibleBuckets);
         await redrawTimeline(allEventsData, visibleBuckets, window.d3.select(INFO_PANEL_SELECTOR), window.d3.select(EDIT_PANEL_SELECTOR), window.d3.select(EVENT_DATA_SELECTOR), renderEventTable, renderEventEditPanel, renderLatestEventsTable, panAndZoomToEvent, newEventLabelInput);
         const updatedBucketsWithCounts = await fetchBuckets();
         renderBucketFilterPanel(updatedBucketsWithCounts, async () => {
+            allEventsData = await loadAndProcessEvents(visibleBuckets);
             await redrawTimeline(allEventsData, visibleBuckets, window.d3.select(INFO_PANEL_SELECTOR), window.d3.select(EDIT_PANEL_SELECTOR), window.d3.select(EVENT_DATA_SELECTOR), renderEventTable, renderEventEditPanel, renderLatestEventsTable, panAndZoomToEvent, newEventLabelInput);
         }, visibleBuckets);
     }, visibleBuckets);
 
-    allEventsData = await Promise.all(visibleBuckets.map(bucketId => fetchEventsForBucket(bucketId))).then(arrays => arrays.flat());
+    allEventsData = await loadAndProcessEvents(visibleBuckets);
 
     if (allEventsData.length === 0) {
         document.body.innerHTML += "<p>No data found for initial buckets.</p>";
@@ -77,7 +95,7 @@ async function main() {
     setupPanelDragging(infoPanel, editPanel, zoomPanel, window.d3.select("#bucket-filter-panel"));
     setupEscapeListener(infoPanel, editPanel, zoomPanel);
     setupEditControls(editPanel, async () => {
-        allEventsData = await Promise.all(visibleBuckets.map(bucketName => fetchEventsForBucket(bucketName))).then(arrays => arrays.flat());
+        allEventsData = await loadAndProcessEvents(visibleBuckets);
         await redrawTimeline(allEventsData, visibleBuckets, infoPanel, editPanel, dataPre, renderEventTable, renderEventEditPanel, renderLatestEventsTable, panAndZoomToEvent, newEventLabelInput);
     }, svg, zoomBehavior);
 
@@ -108,7 +126,7 @@ async function main() {
             showNotification(`Событие "${label}" успешно создано!`);
             labelInput.property("value", ""); // Очистить поле ввода
             // Обновить данные и перерисовать таймлайн
-            allEventsData = await Promise.all(visibleBuckets.map(bucketName => fetchEventsForBucket(bucketName))).then(arrays => arrays.flat());
+            allEventsData = await loadAndProcessEvents(visibleBuckets);
             await redrawTimeline(allEventsData, visibleBuckets, infoPanel, editPanel, dataPre, renderEventTable, renderEventEditPanel, renderLatestEventsTable, panAndZoomToEvent, newEventLabelInput);
         } catch (error) {
             showNotification("Не удалось создать событие. Проверьте консоль для деталей.");

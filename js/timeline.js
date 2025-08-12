@@ -74,21 +74,7 @@ export function renderEventPoints(events, infoPanel, editPanel, dataPre, renderE
         .data(events)
         .enter().append("g")
         .attr("id", d => `event-${d.id}`)
-        .attr("class", d => {
-            let classes = [EVENT_SEGMENT_CLASS];
-            if (d.data.running) {
-                classes.push("running");
-            }
-            // FIX: Use startsWith for dynamic bucket names
-            if (d.bucket.startsWith('aw-watcher-afk_')) {
-                if (d.data.status === 'afk') {
-                    classes.push("afk-event");
-                } else if (d.data.status === 'not-afk') {
-                    classes.push("non-afk-event");
-                }
-            }
-            return classes.join(" ");
-        })
+.attr("class", d => `${EVENT_SEGMENT_CLASS} ${d.bucket.startsWith('aw-watcher-afk_') ? 'afk-bucket-event' : ''}`)
         .attr("transform", d => `translate(${xScale(d.timestamp)}, ${yScale(d.bucket) - BAR_HEIGHT / 2})`)
         .on("mouseover", (event, d) => {
             infoPanel.style("display", "block");
@@ -98,7 +84,7 @@ export function renderEventPoints(events, infoPanel, editPanel, dataPre, renderE
         .on("mouseout", (event, d) => {
             window.d3.select(`#latest-events-table tbody tr[data-event-id="${d.id}"]`).classed("highlighted", false);
         })
-        .on("click", (event, d) => {
+.on("click", (event, d) => {
             if (editPanel.style("display") === "block" && editPanel.property("isSplitMode")) {
                 return;
             }
@@ -113,34 +99,42 @@ export function renderEventPoints(events, infoPanel, editPanel, dataPre, renderE
             }
         });
 
-    segments.append("rect")
-        .attr("class", "event-body")
-        .attr("x", 0)
-        .attr("y", 0)
-        .attr("width", d => {
-            const startTime = d.timestamp.getTime();
-            const endTime = startTime + d.duration * 1000;
-            return xScale(new Date(endTime)) - xScale(d.timestamp);
-        })
-        .attr("height", BAR_HEIGHT);
+    segments.each(function(d) {
+        const group = window.d3.select(this);
+        group.selectAll(".event-body").remove(); // Clear existing rects
 
-    segments.append("rect")
-        .attr("class", "event-start-point")
-        .attr("x", 0)
-        .attr("y", -POINT_SIZE)
-        .attr("width", POINT_SIZE)
-        .attr("height", POINT_SIZE);
+        if (d.bucket.startsWith('aw-stopwatch') && d.activitySegments) {
+            // Stopwatch events with segments
+            group.selectAll(".event-segment-rect")
+                .data(d.activitySegments)
+                .enter()
+                .append("rect")
+                .attr("class", segment => `event-segment-rect event-body ${segment.status}`)
+                .attr("x", segment => xScale(segment.startTimestamp) - xScale(d.timestamp))
+                .attr("y", 0)
+                .attr("width", segment => Math.max(0, xScale(new Date(segment.startTimestamp.getTime() + segment.duration * 1000)) - xScale(segment.startTimestamp)))
+                .attr("height", BAR_HEIGHT);
+        } else {
+            // AFK events and other events without segments
+            let rectClass = 'event-body';
+            if (d.bucket.startsWith('aw-watcher-afk_')) {
+                rectClass += d.data.status === 'afk' ? ' afk-event' : ' non-afk-event';
+            } else {
+                rectClass += ' default-event';
+            }
 
-    segments.append("rect")
-        .attr("class", "event-end-point")
-        .attr("x", d => {
-            const startTime = d.timestamp.getTime();
-            const endTime = startTime + d.duration * 1000;
-            return (xScale(new Date(endTime)) - xScale(d.timestamp)) - POINT_SIZE;
-        })
-        .attr("y", BAR_HEIGHT)
-        .attr("width", POINT_SIZE)
-        .attr("height", POINT_SIZE);
+            group.append("rect")
+                .attr("class", rectClass)
+                .attr("x", 0)
+                .attr("y", 0)
+                .attr("width", d => {
+                    const startTime = d.timestamp.getTime();
+                    const endTime = startTime + d.duration * 1000;
+                    return Math.max(0, xScale(new Date(endTime)) - xScale(d.timestamp));
+                })
+                .attr("height", BAR_HEIGHT);
+        }
+    });
 
     return segments;
 }
@@ -400,18 +394,23 @@ export function setupZoom() {
             const segments = g.selectAll(`.${EVENT_SEGMENT_CLASS}`);
 
             segments.attr("transform", d => `translate(${newXScale(d.timestamp)}, ${yScale(d.bucket) - BAR_HEIGHT / 2})`);
-            segments.select(".event-body")
-                .attr("width", d => {
-                    const startTime = d.timestamp.getTime();
-                    const endTime = startTime + d.duration * 1000;
-                    return newXScale(new Date(endTime)) - newXScale(d.timestamp);
-                });
-            segments.select(".event-end-point")
-                .attr("x", d => {
-                    const startTime = d.timestamp.getTime();
-                    const endTime = startTime + d.duration * 1000;
-                    return (newXScale(new Date(endTime)) - newXScale(d.timestamp)) - POINT_SIZE;
-                });
+            g.selectAll(`.${EVENT_SEGMENT_CLASS}`).each(function(d) {
+                const group = window.d3.select(this);
+                group.attr("transform", `translate(${newXScale(d.timestamp)}, ${yScale(d.bucket) - BAR_HEIGHT / 2})`);
+
+                if (d.bucket.startsWith('aw-stopwatch') && d.activitySegments) {
+                    group.selectAll(".event-segment-rect")
+                        .attr("x", segment => newXScale(segment.startTimestamp) - newXScale(d.timestamp))
+                        .attr("width", segment => Math.max(0, newXScale(new Date(segment.startTimestamp.getTime() + segment.duration * 1000)) - newXScale(segment.startTimestamp)));
+                } else {
+                    group.select(".event-body")
+                        .attr("width", d => {
+                            const startTime = d.timestamp.getTime();
+                            const endTime = startTime + d.duration * 1000;
+                            return Math.max(0, newXScale(new Date(endTime)) - newXScale(d.timestamp));
+                        });
+                }
+            });
         });
 
     svg.call(zoomBehavior);

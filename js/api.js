@@ -1,5 +1,7 @@
 const API_BASE_URL = 'http://localhost:5600';
 
+export let afkBucketId = null;
+
 /**
  * Fetches the count of events for a specific bucket.
  * @param {string} bucketName - The name of the bucket.
@@ -31,6 +33,11 @@ export async function fetchBuckets() {
         }
         const bucketsData = await response.json();
         const bucketIds = Object.keys(bucketsData);
+
+        const afkBucket = bucketIds.find(id => id.startsWith('aw-watcher-afk'));
+        if (afkBucket) {
+            afkBucketId = afkBucket;
+        }
 
         const bucketsWithCountsPromises = bucketIds.map(async (bucketId) => {
             const count = await fetchEventCountForBucket(bucketId);
