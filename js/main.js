@@ -19,6 +19,8 @@ async function main() {
     loadPanelPosition(zoomPanel, 'zoomPanelPosition');
     zoomPanel.style("visibility", "visible");
 
+    const newEventLabelInput = window.d3.select(NEW_EVENT_LABEL_INPUT_SELECTOR);
+
     const container = window.d3.select(TIMELINE_CONTAINER_SELECTOR);
     const chartWidth = container.node().clientWidth;
     const chartHeight = container.node().clientHeight;
@@ -45,10 +47,10 @@ async function main() {
 
     const bucketFilterPanel = window.d3.select("#bucket-filter-panel");
     renderBucketFilterPanel(allBucketsWithCounts, async () => {
-        await redrawTimeline(allEventsData, visibleBuckets, window.d3.select(INFO_PANEL_SELECTOR), window.d3.select(EDIT_PANEL_SELECTOR), window.d3.select(EVENT_DATA_SELECTOR), renderEventTable, renderEventEditPanel, renderLatestEventsTable, panAndZoomToEvent);
+        await redrawTimeline(allEventsData, visibleBuckets, window.d3.select(INFO_PANEL_SELECTOR), window.d3.select(EDIT_PANEL_SELECTOR), window.d3.select(EVENT_DATA_SELECTOR), renderEventTable, renderEventEditPanel, renderLatestEventsTable, panAndZoomToEvent, newEventLabelInput);
         const updatedBucketsWithCounts = await fetchBuckets();
         renderBucketFilterPanel(updatedBucketsWithCounts, async () => {
-            await redrawTimeline(allEventsData, visibleBuckets, window.d3.select(INFO_PANEL_SELECTOR), window.d3.select(EDIT_PANEL_SELECTOR), window.d3.select(EVENT_DATA_SELECTOR), renderEventTable, renderEventEditPanel, renderLatestEventsTable, panAndZoomToEvent);
+            await redrawTimeline(allEventsData, visibleBuckets, window.d3.select(INFO_PANEL_SELECTOR), window.d3.select(EDIT_PANEL_SELECTOR), window.d3.select(EVENT_DATA_SELECTOR), renderEventTable, renderEventEditPanel, renderLatestEventsTable, panAndZoomToEvent, newEventLabelInput);
         }, visibleBuckets);
     }, visibleBuckets);
 
@@ -69,7 +71,6 @@ async function main() {
     setupZoom();
 
     const latestEventsTable = window.d3.select("#latest-events-table");
-    const newEventLabelInput = window.d3.select(NEW_EVENT_LABEL_INPUT_SELECTOR);
     renderLatestEventsTable(allEventsData, latestEventsTable, panAndZoomToEvent, newEventLabelInput);
 
     setupZoomControls(svg, zoomToRange);
@@ -77,7 +78,7 @@ async function main() {
     setupEscapeListener(infoPanel, editPanel, zoomPanel);
     setupEditControls(editPanel, async () => {
         allEventsData = await Promise.all(visibleBuckets.map(bucketName => fetchEventsForBucket(bucketName))).then(arrays => arrays.flat());
-        await redrawTimeline(allEventsData, visibleBuckets, infoPanel, editPanel, dataPre, renderEventTable, renderEventEditPanel, renderLatestEventsTable, panAndZoomToEvent);
+        await redrawTimeline(allEventsData, visibleBuckets, infoPanel, editPanel, dataPre, renderEventTable, renderEventEditPanel, renderLatestEventsTable, panAndZoomToEvent, newEventLabelInput);
     }, svg, zoomBehavior);
 
     setupTimelineHoverInteraction(svg, editPanel);
@@ -108,7 +109,7 @@ async function main() {
             labelInput.property("value", ""); // Очистить поле ввода
             // Обновить данные и перерисовать таймлайн
             allEventsData = await Promise.all(visibleBuckets.map(bucketName => fetchEventsForBucket(bucketName))).then(arrays => arrays.flat());
-            await redrawTimeline(allEventsData, visibleBuckets, infoPanel, editPanel, dataPre, renderEventTable, renderEventEditPanel, renderLatestEventsTable, panAndZoomToEvent);
+            await redrawTimeline(allEventsData, visibleBuckets, infoPanel, editPanel, dataPre, renderEventTable, renderEventEditPanel, renderLatestEventsTable, panAndZoomToEvent, newEventLabelInput);
         } catch (error) {
             showNotification("Не удалось создать событие. Проверьте консоль для деталей.");
             console.error("Failed to create new event:", error);

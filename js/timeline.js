@@ -443,7 +443,7 @@ function resetHoverElements() {
  * @param {function} renderEventEditPanelCallback - Callback to render event edit panel.
  * @param {function} renderLatestEventsTableCallback - Callback to render latest events table.
  */
-export async function redrawTimeline(allEvents, visibleBuckets, infoPanel, editPanel, dataPre, renderEventTableCallback, renderEventEditPanelCallback, renderLatestEventsTableCallback, zoomToEventCallback) {
+export async function redrawTimeline(allEvents, visibleBuckets, infoPanel, editPanel, dataPre, renderEventTableCallback, renderEventEditPanelCallback, renderLatestEventsTableCallback, zoomToEventCallback, newEventLabelInput) {
     const filteredEvents = allEvents.filter(event => visibleBuckets.includes(event.bucket));
 
     g.selectAll("*").remove();
@@ -456,7 +456,7 @@ export async function redrawTimeline(allEvents, visibleBuckets, infoPanel, editP
 
     setupZoom();
 
-    renderLatestEventsTableCallback(filteredEvents, window.d3.select("#latest-events-table"), zoomToEventCallback);
+    renderLatestEventsTableCallback(filteredEvents, window.d3.select("#latest-events-table"), zoomToEventCallback, newEventLabelInput);
 
     const currentTransform = window.d3.zoomTransform(svg.node());
     if (currentTransform && currentTransform.k !== 1) {
