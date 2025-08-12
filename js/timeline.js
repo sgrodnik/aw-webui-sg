@@ -74,7 +74,16 @@ export function renderEventPoints(events, infoPanel, editPanel, dataPre, renderE
         .data(events)
         .enter().append("g")
         .attr("id", d => `event-${d.id}`)
-.attr("class", d => `${EVENT_SEGMENT_CLASS} ${d.bucket.startsWith('aw-watcher-afk_') ? 'afk-bucket-event' : ''}`)
+.attr("class", d => {
+            let classes = `${EVENT_SEGMENT_CLASS}`;
+            if (d.bucket.startsWith('aw-watcher-afk_')) {
+                classes += ' afk-bucket-event';
+            }
+            if (d.data.running === true) {
+                classes += ' running-event';
+            }
+            return classes;
+        })
         .attr("transform", d => `translate(${xScale(d.timestamp)}, ${yScale(d.bucket) - BAR_HEIGHT / 2})`)
         .on("mouseover", (event, d) => {
             infoPanel.style("display", "block");

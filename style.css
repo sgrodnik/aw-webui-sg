@@ -201,6 +201,10 @@ h1 {
     /* tomato */
 }
 
+.running-event .event-segment-rect {
+    opacity: 0.4;
+}
+
 .event-start-point,
 .event-end-point {
     fill: black;

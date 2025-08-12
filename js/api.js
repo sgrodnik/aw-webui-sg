@@ -66,7 +66,7 @@ export async function fetchEventsForBucket(bucketName) {
         const events = await response.json();
 
         const processedEvents = events.map(d => {
-            if (d.data.running === true && d.duration === 0) {
+            if (d.data.running === true) {
                 const now = new Date();
                 const eventTimestamp = new Date(d.timestamp);
                 d.duration = (now - eventTimestamp) / 1000;

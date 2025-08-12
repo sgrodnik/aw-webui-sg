@@ -7,18 +7,13 @@
  */
 export function calculateActivitySegments(stopwatchEvents, afkEvents) {
     return stopwatchEvents.map(swEvent => {
-        // Don't process running events with 0 duration
-        if (swEvent.duration === 0) {
-            swEvent.activitySegments = [{
-                startTimestamp: swEvent.timestamp,
-                duration: 30, // show a 30s segment for running events
-                status: 'running',
-            }];
-            return swEvent;
-        }
-
         const swStart = swEvent.timestamp.getTime();
-        const swEnd = swStart + swEvent.duration * 1000;
+        let swEnd = swStart + swEvent.duration * 1000;
+
+        // For running events, the end time is now
+        if (swEvent.data.running === true) {
+            swEnd = new Date().getTime();
+        }
 
         // Find all AFK events that overlap with the current stopwatch event
         const overlappingAfk = afkEvents.filter(afk => {

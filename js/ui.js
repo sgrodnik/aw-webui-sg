@@ -1,6 +1,7 @@
 
 import { toLocalISO, formatDuration } from './utils.js';
-import { deleteEvent, createEvent } from './api.js';
+import { deleteEvent, createEvent, afkBucketId } from './api.js';
+import { calculateActivitySegments } from './events.js';
 
 const INFO_PANEL_SELECTOR = "#event-info-panel";
 const EDIT_PANEL_SELECTOR = "#event-edit-panel";
@@ -80,9 +81,12 @@ export function renderEventTable(eventData, container) {
 export function renderLatestEventsTable(events, container, zoomToEventCallback, newEventLabelInput) {
     container.select("tbody").html("");
 
-    const filteredEvents = events.filter(event => event.bucket === 'aw-stopwatch');
+    const stopwatchEvents = events.filter(event => event.bucket.startsWith('aw-stopwatch'));
+    const afkEvents = events.filter(event => event.bucket === afkBucketId);
 
-    const latestEvents = filteredEvents.sort((a, b) => b.timestamp - a.timestamp).slice(0, 15);
+    const processedStopwatchEvents = calculateActivitySegments(stopwatchEvents, afkEvents);
+
+    const latestEvents = processedStopwatchEvents.sort((a, b) => b.timestamp - a.timestamp).slice(0, 15);
 
     latestEvents.forEach(event => {
         const row = container.select("tbody").append("tr")
@@ -106,6 +110,15 @@ export function renderLatestEventsTable(events, container, zoomToEventCallback, 
         row.append("td").text(event.timestamp.toLocaleString('en-US'));
         const status = event.data.running ? " ⏳" : "";
         row.append("td").text(formatDuration(event.duration) + status);
+
+        let nonAfkDuration = 0;
+        if (event.activitySegments) {
+            nonAfkDuration = event.activitySegments
+                .filter(segment => segment.status === 'not-afk')
+                .reduce((sum, segment) => sum + segment.duration, 0);
+        }
+        row.append("td").text(formatDuration(nonAfkDuration, false)); // Display non-afk duration without seconds
+
         row.append("td").text(`${event.data.label || event.data.status || "N/A"}`);
     });
 }
@@ -511,11 +524,12 @@ export function setupEditControls(editPanel, onSaveCallback, svg, zoomBehavior) 
         };
 
         try {
-            await deleteEvent(originalEvent.bucket, originalEvent.id);
-            await createEvent(originalEvent.bucket, stoppedEvent);
-            showNotification(`Event "${originalEvent.data.label || 'untitled'}" stopped successfully!`);
-            resetEditPanel();
-            onSaveCallback();
+            if (await createEvent(originalEvent.bucket, stoppedEvent)
+            && await deleteEvent(originalEvent.bucket, originalEvent.id)) {
+                showNotification(`Event "${originalEvent.data.label || 'untitled'}" stopped successfully!`);
+                resetEditPanel();
+                onSaveCallback();
+            }
         } catch (error) {
             showNotification('Failed to stop event. Check console for details.');
             console.error('Failed to stop event:', error);
