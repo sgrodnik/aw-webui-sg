@@ -99,6 +99,7 @@ export function renderLatestEventsTable(events, container, zoomToEventCallback, 
                 }
                 if (newEventLabelInput && event.data.label) {
                     newEventLabelInput.property("value", event.data.label);
+                    newEventLabelInput.node().focus(); // Установить фокус на поле
                 }
             });
 
