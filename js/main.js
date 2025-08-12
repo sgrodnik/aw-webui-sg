@@ -1,9 +1,10 @@
 
 import { fetchBuckets, fetchEventsForBucket, createEvent, afkBucketId } from './api.js';
 import { setupChart, renderEventPoints, setupZoom, zoomToRange, redrawTimeline, panAndZoomToEvent, svg, g, xScale, yScale, xAxisGroup, xAxisTopGroup, timeExtent, zoomBehavior, width, height } from './timeline.js';
-import { renderEventTable, renderLatestEventsTable, setupPanelDragging, loadPanelPosition, setupEscapeListener, renderEventEditPanel, renderBucketFilterPanel, setupZoomControls, setupEditControls, getActiveTimeInput, showNotification } from './ui.js';
+import { renderEventTable, renderLatestEventsTable, setupPanelDragging, loadPanelPosition, setupEscapeListener, renderEventEditPanel, renderBucketFilterPanel, setupZoomControls, setupEditControls, getActiveTimeInput, showNotification, renderReportPanel } from './ui.js';
 import { setupTimelineHoverInteraction } from './timeline.js';
 import { calculateActivitySegments } from './events.js';
+import { generateTaskReport } from './report.js';
 
 const TIMELINE_CONTAINER_SELECTOR = ".timeline-container";
 const INFO_PANEL_SELECTOR = "#event-info-panel";
@@ -11,6 +12,9 @@ const EDIT_PANEL_SELECTOR = "#event-edit-panel";
 const EVENT_DATA_SELECTOR = "#event-data-table";
 const NEW_EVENT_LABEL_INPUT_SELECTOR = "#new-event-label-input";
 const CREATE_EVENT_BUTTON_SELECTOR = "#create-event-button";
+const GENERATE_REPORT_BUTTON_SELECTOR = "#generate-report-button";
+const REPORT_PANEL_SELECTOR = "#report-panel";
+const REPORT_CONTENT_SELECTOR = "#report-content";
 
 let allEventsData = [];
 let visibleBuckets = [];
@@ -92,8 +96,9 @@ async function main() {
     renderLatestEventsTable(allEventsData, latestEventsTable, panAndZoomToEvent, newEventLabelInput);
 
     setupZoomControls(svg, zoomToRange);
-    setupPanelDragging(infoPanel, editPanel, zoomPanel, window.d3.select("#bucket-filter-panel"));
-    setupEscapeListener(infoPanel, editPanel, zoomPanel);
+    const reportPanel = window.d3.select(REPORT_PANEL_SELECTOR);
+    setupPanelDragging(infoPanel, editPanel, zoomPanel, window.d3.select("#bucket-filter-panel"), reportPanel);
+    setupEscapeListener(infoPanel, editPanel, zoomPanel, reportPanel);
     setupEditControls(editPanel, async () => {
         allEventsData = await loadAndProcessEvents(visibleBuckets);
         await redrawTimeline(allEventsData, visibleBuckets, infoPanel, editPanel, dataPre, renderEventTable, renderEventEditPanel, renderLatestEventsTable, panAndZoomToEvent, newEventLabelInput);
@@ -108,7 +113,7 @@ async function main() {
         const label = labelInput.property("value").trim();
 
         if (!label) {
-            showNotification("Пожалуйста, введите название события.");
+            showNotification("Please enter an event name.");
             return;
         }
 
@@ -123,15 +128,20 @@ async function main() {
 
         try {
             await createEvent("aw-stopwatch", newEventData);
-            showNotification(`Событие "${label}" успешно создано!`);
-            labelInput.property("value", ""); // Очистить поле ввода
-            // Обновить данные и перерисовать таймлайн
+            showNotification(`Event "${label}" created successfully!`);
+            labelInput.property("value", ""); // Clear input field
+            // Update data and redraw timeline
             allEventsData = await loadAndProcessEvents(visibleBuckets);
             await redrawTimeline(allEventsData, visibleBuckets, infoPanel, editPanel, dataPre, renderEventTable, renderEventEditPanel, renderLatestEventsTable, panAndZoomToEvent, newEventLabelInput);
         } catch (error) {
-            showNotification("Не удалось создать событие. Проверьте консоль для деталей.");
+            showNotification("Failed to create event. Check console for details.");
             console.error("Failed to create new event:", error);
         }
+    });
+
+    window.d3.select(GENERATE_REPORT_BUTTON_SELECTOR).on("click", () => {
+        const reportData = generateTaskReport(allEventsData);
+        renderReportPanel(reportData, reportPanel, window.d3.select(REPORT_CONTENT_SELECTOR));
     });
 }
 

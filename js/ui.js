@@ -187,6 +187,32 @@ export function setupPanelDragging(...panels) {
 }
 
 /**
+ * Renders the task report into the specified container.
+ * @param {Array<Object>} reportData - The array of task report objects.
+ * @param {d3.Selection} panelContainer - The D3 selection for the report panel container.
+ * @param {d3.Selection} contentContainer - The D3 selection for the content area within the report panel.
+ */
+export function renderReportPanel(reportData, panelContainer, contentContainer) {
+    contentContainer.html(""); // Clear previous content
+
+    if (reportData.length === 0) {
+        contentContainer.append("p").text("No data for the report.");
+        return;
+    }
+
+    reportData.forEach(task => {
+        const taskItem = contentContainer.append("div").attr("class", "task-report-item");
+        taskItem.append("h3").text(task.label);
+        taskItem.append("span").attr("class", "duration").text(task.totalCleanTimeFormatted);
+        if (task.dailyBreakdown.length > 0) {
+            taskItem.append("span").attr("class", "daily-breakdown").text(`(${task.dailyBreakdown.join(', ')})`);
+        }
+    });
+
+    panelContainer.style("display", "block");
+}
+
+/**
  * Loads the saved position of a panel from local storage.
  * @param {d3.Selection} panel - The D3 selection for the panel.
  * @param {string} storageKey - The key used to store the position in local storage.
@@ -214,8 +240,9 @@ export function savePanelPosition(panel, storageKey) {
  * @param {d3.Selection} infoPanel - The D3 selection for the info panel.
  * @param {d3.Selection} editPanel - The D3 selection for the edit panel.
  * @param {d3.Selection} zoomPanel - The D3 selection for the zoom panel.
+ * @param {d3.Selection} reportPanel - The D3 selection for the report panel.
  */
-export function setupEscapeListener(infoPanel, editPanel, zoomPanel) {
+export function setupEscapeListener(infoPanel, editPanel, zoomPanel, reportPanel) {
     document.addEventListener('keydown', (event) => {
         if (event.key === 'Escape') {
             if (editPanel.style('display') === 'block') {
@@ -223,7 +250,10 @@ export function setupEscapeListener(infoPanel, editPanel, zoomPanel) {
                 activeTimeInput = null;
             } else if (infoPanel.style('display') === 'block') {
                 infoPanel.style('display', 'none');
-            } else {
+            } else if (reportPanel.style('display') === 'block') {
+                reportPanel.style('display', 'none');
+            }
+            else {
                 zoomPanel.style('display', zoomPanel.style('display') === 'none' ? 'flex' : 'none');
             }
         }
@@ -470,7 +500,7 @@ export function setupEditControls(editPanel, onSaveCallback, svg, zoomBehavior) 
         const duration = (now.getTime() - startTime.getTime()) / 1000;
 
         if (duration < 0) {
-            showNotification('Некорректная продолжительность события.');
+            showNotification('Invalid event duration.');
             return;
         }
 
@@ -483,11 +513,11 @@ export function setupEditControls(editPanel, onSaveCallback, svg, zoomBehavior) 
         try {
             await deleteEvent(originalEvent.bucket, originalEvent.id);
             await createEvent(originalEvent.bucket, stoppedEvent);
-            showNotification(`Событие "${originalEvent.data.label || 'без названия'}" остановлено!`);
+            showNotification(`Event "${originalEvent.data.label || 'untitled'}" stopped successfully!`);
             resetEditPanel();
             onSaveCallback();
         } catch (error) {
-            showNotification('Не удалось остановить событие. Проверьте консоль для деталей.');
+            showNotification('Failed to stop event. Check console for details.');
             console.error('Failed to stop event:', error);
         }
     });

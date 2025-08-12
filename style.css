@@ -260,6 +260,64 @@ h1 {
     right: 440px;
 }
 
+#report-panel {
+    top: 100px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 80%;
+    max-width: 900px;
+    max-height: 80vh;
+    overflow-y: auto;
+}
+
+#report-panel h2 {
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+#report-content {
+    font-size: 14px;
+}
+
+.task-report-item {
+    border: 1px solid #eee;
+    border-radius: 5px;
+    padding: 15px;
+    margin-bottom: 15px;
+    background-color: #f9f9f9;
+}
+
+.task-report-item {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 10px;
+    border: 1px solid #eee;
+    border-radius: 5px;
+    padding: 10px 15px;
+    margin-bottom: 8px;
+    background-color: #f9f9f9;
+}
+
+.task-report-item h3 {
+    margin: 0;
+    color: #0056b3;
+    font-size: 16px;
+    flex-shrink: 0;
+}
+
+.task-report-item .duration {
+    font-weight: bold;
+    flex-shrink: 0;
+}
+
+.task-report-item .daily-breakdown {
+    font-size: 13px;
+    color: #555;
+    flex-grow: 1;
+    text-align: right;
+}
+
 .draggable-panel h2 {
     margin-top: 0;
     color: #0056b3;

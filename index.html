@@ -16,6 +16,7 @@
 
     <div class="container">
         <div class="controls">
+            <button id="generate-report-button">Generate Report</button>
         </div>
         <div class="timeline-container">
             <svg id="timeline-svg"></svg>
@@ -42,8 +43,8 @@
     </div>
 
     <div id="create-event-container">
-        <input type="text" id="new-event-label-input" placeholder="Название нового события">
-        <button id="create-event-button">Создать событие</button>
+        <input type="text" id="new-event-label-input" placeholder="New event name">
+        <button id="create-event-button">Create Event</button>
     </div>
 
     <div id="latest-events-table-container">
@@ -58,6 +59,11 @@
             <tbody>
             </tbody>
         </table>
+    </div>
+
+    <div id="report-panel" class="draggable-panel" style="display: none;">
+        <h2>Task Report</h2>
+        <div id="report-content"></div>
     </div>
 
     <div id="event-info-panel" class="draggable-panel">
