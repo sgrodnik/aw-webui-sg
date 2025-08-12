@@ -282,6 +282,46 @@ h1 {
     font-weight: bold;
 }
 
+#create-event-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 10px;
+    margin-top: 20px;
+    padding: 10px;
+    background-color: #f8f8f8;
+    border-radius: 5px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+#new-event-label-input {
+    flex-grow: 1;
+    padding: 8px 12px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-size: 14px;
+    max-width: 300px;
+}
+
+#new-event-label-input::placeholder {
+    color: #999;
+}
+
+#create-event-button {
+    padding: 8px 15px;
+    background-color: #28a745;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: background-color 0.3s ease;
+}
+
+#create-event-button:hover {
+    background-color: #218838;
+}
+
 #latest-events-table-container {
     margin-top: 10px;
     padding: 10px;
