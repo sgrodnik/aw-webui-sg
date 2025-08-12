@@ -278,6 +278,13 @@ export function renderEventEditPanel(eventData, container, isSplitMode = false) 
         });
 
     const saveButton = window.d3.select("#edit-save-button");
+    const stopButton = window.d3.select("#edit-stop-button");
+
+    if (eventData.data.running) {
+        stopButton.style("display", "inline-block");
+    } else {
+        stopButton.style("display", "none");
+    }
 
     if (isSplitMode) {
         saveButton.property("disabled", false);
@@ -420,11 +427,13 @@ export function setupEditControls(editPanel, onSaveCallback, svg, zoomBehavior) 
     const cancelButton = window.d3.select("#edit-cancel-button");
     const saveButton = window.d3.select("#edit-save-button");
     const deleteButton = window.d3.select("#edit-delete-button");
+    const stopButton = window.d3.select("#edit-stop-button");
 
     const resetEditPanel = () => {
         editPanel.style("display", "none");
         editPanel.property("isSplitMode", false);
         splitButton.property("disabled", false);
+        stopButton.style("display", "none"); // Скрыть кнопку "Стоп" при сбросе
         editPanel.selectAll(".split-mode-field").remove();
         activeTimeInput = null;
     };
@@ -444,6 +453,37 @@ export function setupEditControls(editPanel, onSaveCallback, svg, zoomBehavior) 
             onSaveCallback();
         } catch (error) {
             showNotification('Failed to delete event. Please check console for details.');
+        }
+    });
+
+    stopButton.on("click", async () => {
+        const originalEvent = editPanel.property("originalEvent");
+        if (!originalEvent || !originalEvent.data.running) return;
+
+        const now = new Date();
+        const startTime = originalEvent.timestamp;
+        const duration = (now.getTime() - startTime.getTime()) / 1000;
+
+        if (duration < 0) {
+            showNotification('Некорректная продолжительность события.');
+            return;
+        }
+
+        const stoppedEvent = {
+            timestamp: startTime.toISOString(),
+            duration: duration,
+            data: { ...originalEvent.data, running: false }
+        };
+
+        try {
+            await deleteEvent(originalEvent.bucket, originalEvent.id);
+            await createEvent(originalEvent.bucket, stoppedEvent);
+            showNotification(`Событие "${originalEvent.data.label || 'без названия'}" остановлено!`);
+            resetEditPanel();
+            onSaveCallback();
+        } catch (error) {
+            showNotification('Не удалось остановить событие. Проверьте консоль для деталей.');
+            console.error('Failed to stop event:', error);
         }
     });
 

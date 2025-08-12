@@ -80,6 +80,15 @@ h1 {
     cursor: not-allowed;
 }
 
+.button-group .stop {
+    background-color: #ffc107;
+    color: #333;
+}
+
+.button-group .stop:hover {
+    background-color: #e0a800;
+}
+
 .split-mode-field {
     background-color: #f0f8ff;
 }
