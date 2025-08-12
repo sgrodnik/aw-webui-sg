@@ -75,8 +75,9 @@ export function renderEventTable(eventData, container) {
  * @param {Array<Object>} events - The array of event data.
  * @param {d3.Selection} container - The D3 selection for the table container.
  * @param {function} zoomToEventCallback - Callback function to zoom/pan the timeline to a specific event.
+ * @param {d3.Selection} newEventLabelInput - The D3 selection for the new event label input field.
  */
-export function renderLatestEventsTable(events, container, zoomToEventCallback) {
+export function renderLatestEventsTable(events, container, zoomToEventCallback, newEventLabelInput) {
     container.select("tbody").html("");
 
     const filteredEvents = events.filter(event => event.bucket === 'aw-stopwatch');
@@ -95,6 +96,9 @@ export function renderLatestEventsTable(events, container, zoomToEventCallback) 
             .on("click", function() {
                 if (zoomToEventCallback) {
                     zoomToEventCallback(event);
+                }
+                if (newEventLabelInput && event.data.label) {
+                    newEventLabelInput.property("value", event.data.label);
                 }
             });
 

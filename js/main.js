@@ -69,7 +69,8 @@ async function main() {
     setupZoom();
 
     const latestEventsTable = window.d3.select("#latest-events-table");
-    renderLatestEventsTable(allEventsData, latestEventsTable, panAndZoomToEvent);
+    const newEventLabelInput = window.d3.select(NEW_EVENT_LABEL_INPUT_SELECTOR);
+    renderLatestEventsTable(allEventsData, latestEventsTable, panAndZoomToEvent, newEventLabelInput);
 
     setupZoomControls(svg, zoomToRange);
     setupPanelDragging(infoPanel, editPanel, zoomPanel, window.d3.select("#bucket-filter-panel"));
