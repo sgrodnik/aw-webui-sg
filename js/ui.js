@@ -103,7 +103,7 @@ export function renderLatestEventsTable(events, container, zoomToEventCallback, 
                 }
                 if (newEventLabelInput && event.data.label) {
                     newEventLabelInput.property("value", event.data.label);
-                    newEventLabelInput.node().focus(); // Установить фокус на поле
+                    newEventLabelInput.node().focus();
                 }
             });
 
@@ -137,7 +137,7 @@ function setupPanelDrag(panel) {
 
     panel.on("mousedown", (event) => {
         const targetTagName = event.target.tagName;
-        if (targetTagName === 'INPUT' || targetTagName === 'BUTTON' || targetTagName === 'LABEL') {
+        if (targetTagName === 'INPUT' || targetTagName === 'BUTTON' || targetTagName === 'LABEL' || targetTagName === 'TEXTAREA') {
             return;
         }
 
@@ -249,13 +249,26 @@ export function savePanelPosition(panel, storageKey) {
 }
 
 /**
+ * Renders the color rules panel.
+ * @param {Array<Object>} colorRules - Array of color rule objects.
+ * @param {d3.Selection} panelContainer - D3 selection for the panel container.
+ * @param {d3.Selection} textarea - D3 selection for the textarea.
+ */
+export function renderColorRulesPanel(colorRules, panelContainer, textarea) {
+    const rulesText = colorRules.map(rule => `${rule.regex.source} ${rule.color}`).join('\n');
+    textarea.property("value", rulesText);
+    panelContainer.style("display", "block");
+}
+
+/**
  * Sets up the event listener for the Escape key to hide panels.
  * @param {d3.Selection} infoPanel - The D3 selection for the info panel.
  * @param {d3.Selection} editPanel - The D3 selection for the edit panel.
  * @param {d3.Selection} zoomPanel - The D3 selection for the zoom panel.
  * @param {d3.Selection} reportPanel - The D3 selection for the report panel.
+ * @param {d3.Selection} colorRulesPanel - The D3 selection for the color rules panel.
  */
-export function setupEscapeListener(infoPanel, editPanel, zoomPanel, reportPanel) {
+export function setupEscapeListener(infoPanel, editPanel, zoomPanel, reportPanel, colorRulesPanel) {
     document.addEventListener('keydown', (event) => {
         if (event.key === 'Escape') {
             if (editPanel.style('display') === 'block') {
@@ -265,6 +278,8 @@ export function setupEscapeListener(infoPanel, editPanel, zoomPanel, reportPanel
                 infoPanel.style('display', 'none');
             } else if (reportPanel.style('display') === 'block') {
                 reportPanel.style('display', 'none');
+            } else if (colorRulesPanel.style('display') === 'block') {
+                colorRulesPanel.style('display', 'none');
             }
             else {
                 zoomPanel.style('display', zoomPanel.style('display') === 'none' ? 'flex' : 'none');
@@ -481,7 +496,7 @@ export function setupEditControls(editPanel, onSaveCallback, svg, zoomBehavior) 
         editPanel.style("display", "none");
         editPanel.property("isSplitMode", false);
         splitButton.property("disabled", false);
-        stopButton.style("display", "none"); // Скрыть кнопку "Стоп" при сбросе
+        stopButton.style("display", "none"); // Hide the "Stop" button on reset
         editPanel.selectAll(".split-mode-field").remove();
         activeTimeInput = null;
     };

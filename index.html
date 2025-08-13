@@ -17,6 +17,7 @@
     <div class="container">
         <div class="controls">
             <button id="generate-report-button">Generate Report</button>
+            <button id="color-rules-button">Configure Colors</button>
         </div>
         <div class="timeline-container">
             <svg id="timeline-svg"></svg>
@@ -91,6 +92,14 @@
     </div>
 
     <div id="notification-container"></div>
+
+    <div id="color-rules-panel" class="draggable-panel" style="display: none;">
+        <h2>Coloring Rules</h2>
+        <textarea id="color-rules-textarea" rows="15" cols="50" placeholder="Enter coloring rules (regex #HEXCOLOR)"></textarea>
+        <div class="button-group">
+            <button type="button" class="save" id="save-color-rules-button">Save</button>
+        </div>
+    </div>
 
 </body>
 

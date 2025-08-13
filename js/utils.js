@@ -89,7 +89,7 @@ const shortMonthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug",
  * Formats a date into a 24-hour absolute time string, adapting based on the visible time range.
  * @param {Date} date - The date to format.
  * @param {Array<Date>} visibleDomain - The [startDate, endDate] of the currently visible timeline.
- * @returns {string} The formatted time string (e.g., "14:30", "08 авг").
+ * @returns {string} The formatted time string (e.g., "14:30", "08 Aug").
  */
 export function formatAbsoluteTime(date, visibleDomain) {
     const visibleDurationMs = visibleDomain[1].getTime() - visibleDomain[0].getTime();

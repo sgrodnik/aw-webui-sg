@@ -187,12 +187,12 @@ h1 {
 }
 
 .event-segment-rect.afk {
-    fill: #ffe6e6;
+    fill: #e8dff5;
     /* light red */
 }
 
 .event-segment-rect.not-afk {
-    fill: #deffdf;
+    fill: #fcf4dd;
     /* light green */
 }
 
@@ -257,6 +257,25 @@ h1 {
 #event-info-panel {
     top: 300px;
     right: 40px;
+}
+
+#color-rules-panel {
+    top: 100px;
+    right: 40px;
+    width: 350px;
+    max-height: 400px;
+}
+
+#color-rules-panel textarea {
+    width: calc(100% - 10px);
+    height: 250px;
+    margin-bottom: 10px;
+    padding: 5px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-family: monospace;
+    font-size: 12px;
+    resize: vertical;
 }
 
 #event-edit-panel {
@@ -464,11 +483,11 @@ h1 {
 
 /* --- AFK Bucket Event Styles (for the separate AFK timeline) --- */
 .afk-event {
-    fill: #ffe6e6;
+    fill: #e8dff5;
 }
 
 .non-afk-event {
-    fill: #deffdf;
+    fill: #fcf4dd;
 }
 
 #notification-container {

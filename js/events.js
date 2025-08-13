@@ -53,7 +53,7 @@ export function calculateActivitySegments(stopwatchEvents, afkEvents) {
                     const afkEnd = afkStart + afk.duration * 1000;
                     return segmentMidpoint >= afkStart && segmentMidpoint < afkEnd;
                 })
-                .sort((a, b) => b.timestamp - a.timestamp)[0]; // Get the latest one if multiple overlap
+                .sort((a, b) => b.timestamp - a.timestamp)[0];
 
             let status = 'not-afk'; // Default status if no AFK event covers the segment
             if (coveringAfk) {

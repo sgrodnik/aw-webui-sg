@@ -91,14 +91,18 @@ function getEventLabel(d) {
  * @param {d3.Selection} infoPanel - The D3 selection for the info panel.
  * @param {d3.Selection} editPanel - The D3 selection for the edit panel.
  * @param {d3.Selection} dataPre - The D3 selection for the pre element to display data.
+ * @param {function} renderEventTableCallback - Callback to render event info table.
+ * @param {function} renderEventEditPanelCallback - Callback to render event edit panel.
+ * @param {Array<Object>} colorRules - Array of color rule objects.
+ * @param {function} getColorForEventCallback - Callback to get the color for an event.
  * @returns {d3.Selection} The D3 selection for the rendered event segments.
  */
-export function renderEventPoints(events, infoPanel, editPanel, dataPre, renderEventTableCallback, renderEventEditPanelCallback) {
+export function renderEventPoints(events, infoPanel, editPanel, dataPre, renderEventTableCallback, renderEventEditPanelCallback, colorRules, getColorForEventCallback) {
     const segments = g.selectAll(`.${EVENT_SEGMENT_CLASS}`)
         .data(events)
         .enter().append("g")
         .attr("id", d => `event-${d.id}`)
-.attr("class", d => {
+        .attr("class", d => {
             let classes = `${EVENT_SEGMENT_CLASS}`;
             if (d.bucket.startsWith('aw-watcher-afk_')) {
                 classes += ' afk-bucket-event';
@@ -117,7 +121,7 @@ export function renderEventPoints(events, infoPanel, editPanel, dataPre, renderE
         .on("mouseout", (event, d) => {
             window.d3.select(`#latest-events-table tbody tr[data-event-id="${d.id}"]`).classed("highlighted", false);
         })
-.on("click", (event, d) => {
+        .on("click", (event, d) => {
             if (editPanel.style("display") === "block" && editPanel.property("isSplitMode")) {
                 return;
             }
@@ -154,6 +158,8 @@ export function renderEventPoints(events, infoPanel, editPanel, dataPre, renderE
         const group = window.d3.select(this);
         group.selectAll(".event-body, .event-label").remove(); // Clear existing rects and labels
 
+        const customColor = getColorForEventCallback(d, colorRules);
+
         if (d.bucket.startsWith('aw-stopwatch') && d.activitySegments) {
             // Stopwatch events with segments
             group.selectAll(".event-segment-rect")
@@ -164,14 +170,19 @@ export function renderEventPoints(events, infoPanel, editPanel, dataPre, renderE
                 .attr("x", segment => xScale(segment.startTimestamp) - xScale(d.timestamp))
                 .attr("y", 0)
                 .attr("width", segment => Math.max(0, xScale(new Date(segment.startTimestamp.getTime() + segment.duration * 1000)) - xScale(segment.startTimestamp)))
-                .attr("height", BAR_HEIGHT);
+                .attr("height", BAR_HEIGHT)
+                .style("fill", customColor ? customColor : null); // Apply custom color
         } else {
             // AFK events and other events without segments
             let rectClass = 'event-body';
-            if (d.bucket.startsWith('aw-watcher-afk_')) {
-                rectClass += d.data.status === 'afk' ? ' afk-event' : ' non-afk-event';
-            } else {
-                rectClass += ' default-event';
+            let fillColor = customColor; // Use custom color if it exists
+
+            if (!customColor) { // If there is no custom color, use standard classes
+                if (d.bucket.startsWith('aw-watcher-afk_')) {
+                    rectClass += d.data.status === 'afk' ? ' afk-event' : ' non-afk-event';
+                } else {
+                    rectClass += ' default-event';
+                }
             }
 
             group.append("rect")
@@ -183,7 +194,8 @@ export function renderEventPoints(events, infoPanel, editPanel, dataPre, renderE
                     const endTime = startTime + d.duration * 1000;
                     return Math.max(0, xScale(new Date(endTime)) - xScale(d.timestamp));
                 })
-                .attr("height", BAR_HEIGHT);
+                .attr("height", BAR_HEIGHT)
+                .style("fill", fillColor ? fillColor : null); // Apply custom color
         }
 
         // Add text label
@@ -519,8 +531,12 @@ function resetHoverElements() {
  * @param {function} renderEventTableCallback - Callback to render event info table.
  * @param {function} renderEventEditPanelCallback - Callback to render event edit panel.
  * @param {function} renderLatestEventsTableCallback - Callback to render latest events table.
+ * @param {function} zoomToEventCallback - Callback to zoom/pan the timeline to a specific event.
+ * @param {d3.Selection} newEventLabelInput - The D3 selection for the new event label input field.
+ * @param {Array<Object>} colorRules - Array of color rule objects.
+ * @param {function} getColorForEventCallback - Callback to get the color for an event.
  */
-export async function redrawTimeline(allEvents, visibleBuckets, infoPanel, editPanel, dataPre, renderEventTableCallback, renderEventEditPanelCallback, renderLatestEventsTableCallback, zoomToEventCallback, newEventLabelInput) {
+export async function redrawTimeline(allEvents, visibleBuckets, infoPanel, editPanel, dataPre, renderEventTableCallback, renderEventEditPanelCallback, renderLatestEventsTableCallback, zoomToEventCallback, newEventLabelInput, colorRules, getColorForEventCallback) {
     const filteredEvents = allEvents.filter(event => visibleBuckets.includes(event.bucket));
 
     g.selectAll("*").remove();
@@ -529,7 +545,7 @@ export async function redrawTimeline(allEvents, visibleBuckets, infoPanel, editP
 
     resetHoverElements();
 
-    renderEventPoints(filteredEvents, infoPanel, editPanel, dataPre, renderEventTableCallback, renderEventEditPanelCallback);
+    renderEventPoints(filteredEvents, infoPanel, editPanel, dataPre, renderEventTableCallback, renderEventEditPanelCallback, colorRules, getColorForEventCallback);
 
     setupZoom();
 
