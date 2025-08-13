@@ -4,7 +4,8 @@ import { getActiveTimeInput } from './ui.js';
 const SVG_SELECTOR = "#timeline-svg";
 const TIMELINE_CONTAINER_SELECTOR = ".timeline-container";
 const EVENT_SEGMENT_CLASS = "event-segment-group";
-const BAR_HEIGHT = 10;
+const EVENT_LABEL_CLASS = "event-label";
+const BAR_HEIGHT = 30;
 const POINT_SIZE = 1;
 const HOVER_LINE_CLASS = "hover-line";
 const HOVER_TOOLTIP_CLASS = "hover-tooltip";
@@ -58,7 +59,30 @@ export function setupChart(events, chartWidth, chartHeight) {
         .attr("transform", `translate(0, 20)`)
         .call(xAxisTop);
 
+    // Add a defs section for clipPaths
+    svg.append('defs');
+
     return { svg, g, xScale, yScale, xAxisGroup, xAxisTopGroup, timeExtent };
+}
+
+/**
+ * Gets the appropriate label for an event based on its data, split into two lines.
+ * @param {Object} d - The event data object.
+ * @returns {Array<string>} An array containing two strings for the label.
+ */
+function getEventLabel(d) {
+    if (d.bucket.startsWith('aw-stopwatch')) {
+        const label = d.data.label || '';
+        const lastColonIndex = label.lastIndexOf(':');
+        if (lastColonIndex > -1 && lastColonIndex < label.length - 1) {
+            return [label.substring(0, lastColonIndex).trim(), label.substring(lastColonIndex + 1).trim()];
+        }
+        return [label, ''];
+    }
+    if (d.bucket.startsWith('aw-watcher-window')) {
+        return [d.data.app, d.data.title];
+    }
+    return ['', ''];
 }
 
 /**
@@ -108,9 +132,27 @@ export function renderEventPoints(events, infoPanel, editPanel, dataPre, renderE
             }
         });
 
+    // Define clip-paths for each event
+    const defs = svg.select('defs');
+    defs.selectAll(".clip-path").remove(); // Clear old clip-paths
+    defs.selectAll(".clip-path")
+        .data(events)
+        .enter()
+        .append("clipPath")
+        .attr("class", "clip-path")
+        .attr("id", d => `clip-${d.id}`)
+        .append("rect")
+        .attr("width", d => {
+            const startTime = d.timestamp.getTime();
+            const endTime = startTime + d.duration * 1000;
+            return Math.max(0, xScale(new Date(endTime)) - xScale(d.timestamp));
+        })
+        .attr("height", BAR_HEIGHT);
+
+
     segments.each(function(d) {
         const group = window.d3.select(this);
-        group.selectAll(".event-body").remove(); // Clear existing rects
+        group.selectAll(".event-body, .event-label").remove(); // Clear existing rects and labels
 
         if (d.bucket.startsWith('aw-stopwatch') && d.activitySegments) {
             // Stopwatch events with segments
@@ -142,6 +184,24 @@ export function renderEventPoints(events, infoPanel, editPanel, dataPre, renderE
                     return Math.max(0, xScale(new Date(endTime)) - xScale(d.timestamp));
                 })
                 .attr("height", BAR_HEIGHT);
+        }
+
+        // Add text label
+        const [line1, line2] = getEventLabel(d);
+        if (line1 || line2) {
+            const textLabel = group.append("text")
+                .attr("class", EVENT_LABEL_CLASS)
+                .attr("clip-path", `url(#clip-${d.id})`)
+                .attr("x", 4) // Padding from the left edge
+                .attr("y", BAR_HEIGHT / 2 - 5); // Adjust y for two lines
+
+            textLabel.append("tspan")
+                .text(line1);
+
+            textLabel.append("tspan")
+                .attr("x", 4) // Reset x position for the second line
+                .attr("dy", "1.2em") // Move down for the second line
+                .text(line2);
         }
     });
 
@@ -407,18 +467,27 @@ export function setupZoom() {
                 const group = window.d3.select(this);
                 group.attr("transform", `translate(${newXScale(d.timestamp)}, ${yScale(d.bucket) - BAR_HEIGHT / 2})`);
 
+                let totalWidth = 0;
+
                 if (d.bucket.startsWith('aw-stopwatch') && d.activitySegments) {
                     group.selectAll(".event-segment-rect")
                         .attr("x", segment => newXScale(segment.startTimestamp) - newXScale(d.timestamp))
-                        .attr("width", segment => Math.max(0, newXScale(new Date(segment.startTimestamp.getTime() + segment.duration * 1000)) - newXScale(segment.startTimestamp)));
-                } else {
-                    group.select(".event-body")
-                        .attr("width", d => {
-                            const startTime = d.timestamp.getTime();
-                            const endTime = startTime + d.duration * 1000;
-                            return Math.max(0, newXScale(new Date(endTime)) - newXScale(d.timestamp));
+                        .attr("width", segment => {
+                            const width = Math.max(0, newXScale(new Date(segment.startTimestamp.getTime() + segment.duration * 1000)) - newXScale(segment.startTimestamp));
+                            totalWidth += width;
+                            return width;
                         });
+                } else {
+                    const width = Math.max(0, newXScale(new Date(d.timestamp.getTime() + d.duration * 1000)) - newXScale(d.timestamp));
+                    group.select(".event-body").attr("width", width);
+                    totalWidth = width;
                 }
+
+                // Update clip path
+                svg.select(`#clip-${d.id} rect`).attr("width", totalWidth);
+
+                // Hide label if the event is too small
+                group.select(`.${EVENT_LABEL_CLASS}`).style("display", totalWidth < 20 ? "none" : "inline");
             });
         });
 
