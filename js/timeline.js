@@ -1,7 +1,9 @@
 import { formatAbsoluteTime, formatRelativeTime, generateRelativeTimeTicks, toLocalISO, formatDuration, isColorDark } from './utils.js';
-import { getActiveTimeInput } from './ui.js';
 import { getAllEventsData, getVisibleBuckets, getColorRules } from './state.js';
 import { getColorForEvent } from './colorRules.js';
+import { getActiveTimeInput } from './eventForm.js';
+import { showNotification } from './notification.js';
+import { renderLatestEventsTable } from './ui.js';
 
 const SVG_SELECTOR = "#timeline-svg";
 const TIMELINE_CONTAINER_SELECTOR = ".timeline-container";
@@ -531,11 +533,10 @@ function resetHoverElements() {
  * @param {d3.Selection} dataPre - The D3 selection for the pre element to display data.
  * @param {function} renderEventTableCallback - Callback to render event info table.
  * @param {function} renderEventEditPanelCallback - Callback to render event edit panel.
- * @param {function} renderLatestEventsTableCallback - Callback to render latest events table.
  * @param {function} zoomToEventCallback - Callback to zoom/pan the timeline to a specific event.
  * @param {d3.Selection} newEventLabelInput - The D3 selection for the new event label input field.
  */
-export async function redrawTimeline(allEvents, visibleBuckets, infoPanel, editPanel, dataPre, renderEventTableCallback, renderEventEditPanelCallback, renderLatestEventsTableCallback, zoomToEventCallback, newEventLabelInput) {
+export async function redrawTimeline(allEvents, visibleBuckets, infoPanel, editPanel, dataPre, renderEventTableCallback, renderEventEditPanelCallback, zoomToEventCallback, newEventLabelInput) {
     const filteredEvents = allEvents.filter(event => visibleBuckets.includes(event.bucket));
 
     g.selectAll("*").remove();
@@ -548,7 +549,7 @@ export async function redrawTimeline(allEvents, visibleBuckets, infoPanel, editP
 
     setupZoom();
 
-    renderLatestEventsTableCallback(filteredEvents, window.d3.select("#latest-events-table"), zoomToEventCallback, newEventLabelInput);
+    renderLatestEventsTable(filteredEvents, window.d3.select("#latest-events-table"), zoomToEventCallback, newEventLabelInput);
 
     const currentTransform = window.d3.zoomTransform(svg.node());
     if (currentTransform && currentTransform.k !== 1) {

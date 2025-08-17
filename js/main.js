@@ -1,13 +1,16 @@
 
 import { fetchBuckets, fetchEventsForBucket, createEvent } from './api.js';
 import { setupChart, renderEventPoints, setupZoom, zoomToRange, redrawTimeline, panAndZoomToEvent, svg, g, xScale, yScale, xAxisGroup, xAxisTopGroup, timeExtent, zoomBehavior, width, height } from './timeline.js';
-import { renderEventTable, renderLatestEventsTable, setupPanelDragging, loadPanelPosition, setupEscapeListener, renderEventEditPanel, renderBucketFilterPanel, setupZoomControls, setupEditControls, getActiveTimeInput, showNotification, renderReportPanel, renderColorRulesPanel } from './ui.js';
+import { renderEventTable, renderLatestEventsTable, setupZoomControls } from './ui.js';
 import { setupTimelineHoverInteraction } from './timeline.js';
 import { calculateActivitySegments } from './events.js';
 import { generateTaskReport } from './report.js';
-import { loadColorRules, saveColorRules, getColorForEvent } from './colorRules.js';
+import { loadColorRules, saveColorRules } from './colorRules.js';
 import { initCalendar, renderCalendar } from './calendar.js';
 import { getAppState, setAllEventsData, setVisibleBuckets, setColorRules, setAfkBucketId, getAllEventsData, getVisibleBuckets, getColorRules, getAfkBucketId } from './state.js';
+import { showNotification } from './notification.js';
+import { setupPanelDragging, loadPanelPosition, renderReportPanel, renderColorRulesPanel, setupEscapeListener, renderBucketFilterPanel } from './panelManager.js';
+import { renderEventEditPanel, setupEditControls } from './eventForm.js';
 
 const TIMELINE_CONTAINER_SELECTOR = ".timeline-container";
 const INFO_PANEL_SELECTOR = "#event-info-panel";

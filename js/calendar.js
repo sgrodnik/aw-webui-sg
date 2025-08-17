@@ -1,9 +1,9 @@
-import { setupPanelDragging, loadPanelPosition, setupEscapeListener } from './ui.js';
 import { fetchEventsForBucket } from './api.js';
 import { calculateActivitySegments } from './events.js';
 import { formatDuration, getFormattedDate, isColorDark } from './utils.js';
 import { getColorForEvent } from './colorRules.js';
 import { getAfkBucketId, getColorRules } from './state.js';
+import { setupPanelDragging, loadPanelPosition, setupEscapeListener } from './panelManager.js';
 
 const CALENDAR_PANEL_SELECTOR = "#calendar-panel";
 const CURRENT_MONTH_YEAR_SELECTOR = "#current-month-year";
