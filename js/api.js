@@ -54,10 +54,18 @@ export async function fetchBuckets() {
 /**
  * Fetches event data for a specific bucket.
  * @param {string} bucketName - The name of the bucket.
+ * @param {Date} [startDate] - Optional start date for filtering events.
+ * @param {Date} [endDate] - Optional end date for filtering events.
  * @returns {Promise<Array<Object>>} A promise that resolves to an array of event objects for the bucket.
  */
-export async function fetchEventsForBucket(bucketName) {
-    const url = `${API_BASE_URL}/api/0/buckets/${bucketName}/events?limit=1000`;
+export async function fetchEventsForBucket(bucketName, startDate, endDate) {
+    let url = `${API_BASE_URL}/api/0/buckets/${bucketName}/events?limit=1000`;
+    if (startDate) {
+        url += `&start=${startDate.toISOString()}`;
+    }
+    if (endDate) {
+        url += `&end=${endDate.toISOString()}`;
+    }
     try {
         const response = await fetch(url);
         if (!response.ok) {

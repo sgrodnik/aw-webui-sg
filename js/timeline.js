@@ -1,4 +1,4 @@
-import { formatAbsoluteTime, formatRelativeTime, generateRelativeTimeTicks, toLocalISO, formatDuration } from './utils.js';
+import { formatAbsoluteTime, formatRelativeTime, generateRelativeTimeTicks, toLocalISO, formatDuration, isColorDark } from './utils.js';
 import { getActiveTimeInput } from './ui.js';
 
 const SVG_SELECTOR = "#timeline-svg";
@@ -205,7 +205,8 @@ export function renderEventPoints(events, infoPanel, editPanel, dataPre, renderE
                 .attr("class", EVENT_LABEL_CLASS)
                 .attr("clip-path", `url(#clip-${d.id})`)
                 .attr("x", 4) // Padding from the left edge
-                .attr("y", BAR_HEIGHT / 2 - 5); // Adjust y for two lines
+                .attr("y", BAR_HEIGHT / 2 - 5) // Adjust y for two lines
+                .style("fill", customColor && isColorDark(customColor) ? "white" : "black"); // Apply contrasting text color
 
             textLabel.append("tspan")
                 .text(line1);

@@ -143,3 +143,37 @@ export function formatDuration(seconds, includeSeconds = true) {
     }
     return "";
 }
+
+/**
+ * Formats a Date object into a YYYY-MM-DD string.
+ * @param {Date} date - The Date object to format.
+ * @returns {string} The formatted date string (e.g., "2025-08-15").
+ */
+export function getFormattedDate(date) {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+}
+
+/**
+ * Determines if a given HEX color is dark.
+ * @param {string} hexColor - The color in HEX format (e.g., "#RRGGBB").
+ * @returns {boolean} True if the color is dark, false otherwise.
+ */
+export function isColorDark(hexColor) {
+    if (!hexColor) return false;
+    const color = (hexColor.charAt(0) === '#') ? hexColor.substring(1, 7) : hexColor;
+    const r = parseInt(color.substring(0, 2), 16);
+    const g = parseInt(color.substring(2, 4), 16);
+    const b = parseInt(color.substring(4, 6), 16);
+    const uicolors = [r / 255, g / 255, b / 255];
+    const c = uicolors.map((col) => {
+        if (col <= 0.03928) {
+            return col / 12.92;
+        }
+        return Math.pow((col + 0.055) / 1.055, 2.4);
+    });
+    const L = (0.2126 * c[0]) + (0.7152 * c[1]) + (0.0722 * c[2]);
+    return L <= 0.179;
+}

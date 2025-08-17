@@ -16,6 +16,30 @@ body {
     box-sizing: border-box;
 }
 
+.activity-rectangle.continues-from-yesterday {
+    border-left: none;
+    border-top-left-radius: 0;
+    border-bottom-left-radius: 0;
+    margin-left: -2px;
+    width: calc(100% + 2px);
+}
+
+.activity-rectangle.continues-to-tomorrow {
+    border-right: none;
+    border-top-right-radius: 0;
+    border-bottom-right-radius: 0;
+    margin-right: -2px;
+    width: calc(100% + 2px);
+}
+
+.activity-rectangle.continues-from-yesterday.continues-to-tomorrow {
+    width: 110%;
+}
+
+.activity-rectangle.activity-elevated {
+    z-index: 10;
+}
+
 #event-edit-panel input[type="text"]:focus {
     border: 1px solid #ccc;
     background-color: #f9f9f9;
@@ -536,4 +560,173 @@ h1 {
     pointer-events: none;
     font-family: sans-serif;
     white-space: nowrap;
+}
+
+/* Calendar styles */
+#calendar-panel {
+    top: 100px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 80%;
+    max-width: 900px;
+    max-height: 80vh;
+    overflow-y: auto;
+    background-color: #ffffff;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    padding: 15px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    z-index: 1000;
+    cursor: grab;
+}
+
+.calendar-header {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin-bottom: 15px;
+    gap: 15px; /* Adjust as needed for spacing */
+}
+
+.calendar-header h2 {
+    margin: 0;
+    font-size: 24px;
+    color: #333;
+}
+
+.calendar-header button {
+    background-color: #f0f0f0;
+    border: 1px solid #ccc;
+    padding: 8px 12px;
+    cursor: pointer;
+    font-size: 18px;
+    border-radius: 5px;
+}
+
+.calendar-header button:hover {
+    background-color: #e0e0e0;
+}
+
+.calendar-weekdays {
+    display: grid;
+    grid-template-columns: 50px repeat(7, 100px); /* Week number column + 7 days with fixed width */
+    font-weight: bold;
+    /* margin-bottom: 10px; */ /* Removed margin-bottom */
+    text-align: center;
+    color: #333;
+}
+
+.calendar-weekdays span {
+    padding: 5px 0;
+}
+
+.calendar-grid {
+    display: grid;
+    grid-template-columns: 50px repeat(7, 100px); /* Week number column + 7 days with fixed width */
+    gap: 1px;
+    padding-top: 5px; /* Added padding-top to compensate for removed margin-bottom */
+}
+
+.calendar-day {
+    background-color: #ffffff;
+    border: 1px solid black;
+    padding: 1px; /* Reduced padding for the day cell */
+    text-align: center;
+    min-height: 80px; /* Adjust as needed */
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    font-size: 14px;
+    color: #333;
+    position: relative;
+    overflow: visible; /* Allow content to overflow */
+}
+
+.calendar-day.empty {
+    background-color: #f0f0f0;
+    border: 1px solid #ccc;
+    visibility: hidden; /* Hide empty cells */
+}
+
+.calendar-day.current-month {
+    /* No specific style, just to distinguish from prev/next month */
+}
+
+.calendar-day.other-month {
+    color: #aaa; /* Lighter color for days of other months */
+}
+
+.calendar-day .day-number {
+    position: absolute;
+    margin: auto;
+    bottom: 0px;
+}
+
+.calendar-week-number,
+.calendar-weekday-header { /* Added .calendar-weekday-header */
+    font-weight: bold;
+    text-align: center;
+    padding: 10px 5px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #333;
+}
+
+.activity-rectangle,
+.activity-placeholder {
+    width: calc(100% - 0px); /* Full width of the day cell minus padding (2px left + 2px right) */
+    height: 20px; /* Fixed height for each activity */
+    background-color: #ffffff; /* White background */
+    margin-bottom: 1px; /* Small gap between rectangles */
+    border: 1px solid black; /* Black border */
+    border-radius: 0px;
+    color: #333; /* Darker text color for white background */
+    font-size: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: visible; /* Allow content to overflow */
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    padding: 0 2px; /* Reduced padding */
+    box-sizing: border-box;
+    position: relative; /* For z-index and potential absolute positioning of children */
+    z-index: 1; /* Ensure it's above other elements */
+}
+
+.activity-label {
+    text-align: center;
+    font-size: 12px;
+    color: black;
+    overflow: hidden; /* Default to hidden */
+    white-space: nowrap; /* Default to nowrap */
+    text-overflow: ellipsis; /* Default to ellipsis */
+}
+
+.activity-rectangle.activity-elevated.continues-to-tomorrow .activity-label {
+    position: absolute;
+    left: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    width: auto; /* Allow text to take natural width */
+    max-width: none; /* Remove max-width constraint */
+    overflow: visible; /* Allow text to overflow */
+    white-space: nowrap; /* Ensure text stays on one line */
+    text-overflow: clip; /* Prevent ellipsis */
+    text-align: left; /* Align text to the left */
+    padding-left: 2px; /* Match activity-rectangle padding */
+    background-color: inherit; /* Inherit background to cover border */
+    z-index: 2; /* Ensure text is above other activity rectangles */
+}
+
+.activity-placeholder {
+    background-color: transparent;
+    border-color: transparent;
+}
+
+.activity-rectangle.highlight-same-name {
+    outline: 2px solid #007bff; /* Blue outline */
+    outline-offset: -2px;
 }

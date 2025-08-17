@@ -6,6 +6,7 @@ import { setupTimelineHoverInteraction } from './timeline.js';
 import { calculateActivitySegments } from './events.js';
 import { generateTaskReport } from './report.js';
 import { loadColorRules, saveColorRules, getColorForEvent } from './colorRules.js';
+import { initCalendar, renderCalendar } from './calendar.js';
 
 const TIMELINE_CONTAINER_SELECTOR = ".timeline-container";
 const INFO_PANEL_SELECTOR = "#event-info-panel";
@@ -20,6 +21,8 @@ const COLOR_RULES_BUTTON_SELECTOR = "#color-rules-button";
 const COLOR_RULES_PANEL_SELECTOR = "#color-rules-panel";
 const COLOR_RULES_TEXTAREA_SELECTOR = "#color-rules-textarea";
 const SAVE_COLOR_RULES_BUTTON_SELECTOR = "#save-color-rules-button";
+const OPEN_CALENDAR_BUTTON_SELECTOR = "#open-calendar-button";
+const CALENDAR_PANEL_SELECTOR = "#calendar-panel";
 
 let allEventsData = [];
 let visibleBuckets = [];
@@ -44,6 +47,9 @@ async function main() {
     const zoomPanel = window.d3.select("#zoom-panel");
     loadPanelPosition(zoomPanel, 'zoomPanelPosition');
     zoomPanel.style("visibility", "visible");
+
+    const calendarPanel = window.d3.select(CALENDAR_PANEL_SELECTOR);
+    initCalendar();
 
     const newEventLabelInput = window.d3.select(NEW_EVENT_LABEL_INPUT_SELECTOR);
 
@@ -107,8 +113,8 @@ async function main() {
 
     setupZoomControls(svg, zoomToRange);
     const reportPanel = window.d3.select(REPORT_PANEL_SELECTOR);
-    setupPanelDragging(infoPanel, editPanel, zoomPanel, window.d3.select("#bucket-filter-panel"), reportPanel, colorRulesPanel);
-    setupEscapeListener(infoPanel, editPanel, zoomPanel, reportPanel, colorRulesPanel);
+    setupPanelDragging(infoPanel, editPanel, zoomPanel, window.d3.select("#bucket-filter-panel"), reportPanel, colorRulesPanel, calendarPanel);
+    setupEscapeListener(infoPanel, editPanel, zoomPanel, reportPanel, colorRulesPanel, calendarPanel);
     setupEditControls(editPanel, async () => {
         allEventsData = await loadAndProcessEvents(visibleBuckets);
         await redrawTimeline(allEventsData, visibleBuckets, infoPanel, editPanel, dataPre, renderEventTable, renderEventEditPanel, renderLatestEventsTable, panAndZoomToEvent, newEventLabelInput, colorRules, getColorForEvent);
@@ -130,6 +136,7 @@ async function main() {
         colorRulesPanel.style("display", "none");
         allEventsData = await loadAndProcessEvents(visibleBuckets);
         await redrawTimeline(allEventsData, visibleBuckets, infoPanel, editPanel, dataPre, renderEventTable, renderEventEditPanel, renderLatestEventsTable, panAndZoomToEvent, newEventLabelInput, colorRules, getColorForEvent);
+        renderCalendar();
     });
 
     window.d3.select(CREATE_EVENT_BUTTON_SELECTOR).on("click", async () => {
@@ -166,6 +173,10 @@ async function main() {
     window.d3.select(GENERATE_REPORT_BUTTON_SELECTOR).on("click", () => {
         const reportData = generateTaskReport(allEventsData);
         renderReportPanel(reportData, reportPanel, window.d3.select(REPORT_CONTENT_SELECTOR));
+    });
+
+    window.d3.select(OPEN_CALENDAR_BUTTON_SELECTOR).on("click", () => {
+        calendarPanel.style("display", calendarPanel.style("display") === "none" ? "block" : "none");
     });
 }
 
