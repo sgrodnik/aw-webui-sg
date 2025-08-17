@@ -1,5 +1,5 @@
 
-import { fetchBuckets, fetchEventsForBucket, createEvent, afkBucketId } from './api.js';
+import { fetchBuckets, fetchEventsForBucket, createEvent } from './api.js';
 import { setupChart, renderEventPoints, setupZoom, zoomToRange, redrawTimeline, panAndZoomToEvent, svg, g, xScale, yScale, xAxisGroup, xAxisTopGroup, timeExtent, zoomBehavior, width, height } from './timeline.js';
 import { renderEventTable, renderLatestEventsTable, setupPanelDragging, loadPanelPosition, setupEscapeListener, renderEventEditPanel, renderBucketFilterPanel, setupZoomControls, setupEditControls, getActiveTimeInput, showNotification, renderReportPanel, renderColorRulesPanel } from './ui.js';
 import { setupTimelineHoverInteraction } from './timeline.js';
@@ -7,6 +7,7 @@ import { calculateActivitySegments } from './events.js';
 import { generateTaskReport } from './report.js';
 import { loadColorRules, saveColorRules, getColorForEvent } from './colorRules.js';
 import { initCalendar, renderCalendar } from './calendar.js';
+import { getAppState, setAllEventsData, setVisibleBuckets, setColorRules, setAfkBucketId, getAllEventsData, getVisibleBuckets, getColorRules, getAfkBucketId } from './state.js';
 
 const TIMELINE_CONTAINER_SELECTOR = ".timeline-container";
 const INFO_PANEL_SELECTOR = "#event-info-panel";
@@ -24,15 +25,11 @@ const SAVE_COLOR_RULES_BUTTON_SELECTOR = "#save-color-rules-button";
 const OPEN_CALENDAR_BUTTON_SELECTOR = "#open-calendar-button";
 const CALENDAR_PANEL_SELECTOR = "#calendar-panel";
 
-let allEventsData = [];
-let visibleBuckets = [];
-let colorRules = [];
-
 async function loadAndProcessEvents(buckets) {
     const allEvents = await Promise.all(buckets.map(bucketId => fetchEventsForBucket(bucketId))).then(arrays => arrays.flat());
 
     const stopwatchEvents = allEvents.filter(e => e.bucket.startsWith('aw-stopwatch'));
-    const afkEvents = allEvents.filter(e => e.bucket === afkBucketId);
+    const afkEvents = allEvents.filter(e => e.bucket === getAfkBucketId());
 
     const processedEvents = calculateActivitySegments(stopwatchEvents, afkEvents);
 
@@ -48,9 +45,6 @@ async function main() {
     loadPanelPosition(zoomPanel, 'zoomPanelPosition');
     zoomPanel.style("visibility", "visible");
 
-    const calendarPanel = window.d3.select(CALENDAR_PANEL_SELECTOR);
-    initCalendar();
-
     const newEventLabelInput = window.d3.select(NEW_EVENT_LABEL_INPUT_SELECTOR);
 
     const container = window.d3.select(TIMELINE_CONTAINER_SELECTOR);
@@ -63,41 +57,49 @@ async function main() {
         return;
     }
 
+    const afkBucket = allBucketsWithCounts.find(b => b.id.startsWith('aw-watcher-afk'));
+    if (afkBucket) {
+        setAfkBucketId(afkBucket.id);
+    }
+
+    setColorRules(loadColorRules());
+
+    const calendarPanel = window.d3.select(CALENDAR_PANEL_SELECTOR);
+    initCalendar();
+
     const savedVisibleBuckets = localStorage.getItem("visibleBuckets");
     if (savedVisibleBuckets) {
         try {
-            visibleBuckets = JSON.parse(savedVisibleBuckets);
+            setVisibleBuckets(JSON.parse(savedVisibleBuckets));
             const allBucketIds = allBucketsWithCounts.map(b => b.id);
-            visibleBuckets = visibleBuckets.filter(bucketId => allBucketIds.includes(bucketId));
+            setVisibleBuckets(getVisibleBuckets().filter(bucketId => allBucketIds.includes(bucketId)));
         } catch (e) {
             console.error("Failed to parse visibleBuckets from localStorage, resetting.", e);
-            visibleBuckets = allBucketsWithCounts.map(b => b.id);
+            setVisibleBuckets(allBucketsWithCounts.map(b => b.id));
         }
     } else {
-        visibleBuckets = allBucketsWithCounts.map(b => b.id);
+        setVisibleBuckets(allBucketsWithCounts.map(b => b.id));
     }
 
     const bucketFilterPanel = window.d3.select("#bucket-filter-panel");
     renderBucketFilterPanel(allBucketsWithCounts, async () => {
-        allEventsData = await loadAndProcessEvents(visibleBuckets);
-        await redrawTimeline(allEventsData, visibleBuckets, window.d3.select(INFO_PANEL_SELECTOR), window.d3.select(EDIT_PANEL_SELECTOR), window.d3.select(EVENT_DATA_SELECTOR), renderEventTable, renderEventEditPanel, renderLatestEventsTable, panAndZoomToEvent, newEventLabelInput);
+        setAllEventsData(await loadAndProcessEvents(getVisibleBuckets()));
+        await redrawTimeline(getAllEventsData(), getVisibleBuckets(), window.d3.select(INFO_PANEL_SELECTOR), window.d3.select(EDIT_PANEL_SELECTOR), window.d3.select(EVENT_DATA_SELECTOR), renderEventTable, renderEventEditPanel, renderLatestEventsTable, panAndZoomToEvent, newEventLabelInput);
         const updatedBucketsWithCounts = await fetchBuckets();
         renderBucketFilterPanel(updatedBucketsWithCounts, async () => {
-            allEventsData = await loadAndProcessEvents(visibleBuckets);
-            await redrawTimeline(allEventsData, visibleBuckets, window.d3.select(INFO_PANEL_SELECTOR), window.d3.select(EDIT_PANEL_SELECTOR), window.d3.select(EVENT_DATA_SELECTOR), renderEventTable, renderEventEditPanel, renderLatestEventsTable, panAndZoomToEvent, newEventLabelInput);
-        }, visibleBuckets);
-    }, visibleBuckets);
+            setAllEventsData(await loadAndProcessEvents(getVisibleBuckets()));
+            await redrawTimeline(getAllEventsData(), getVisibleBuckets(), window.d3.select(INFO_PANEL_SELECTOR), window.d3.select(EDIT_PANEL_SELECTOR), window.d3.select(EVENT_DATA_SELECTOR), renderEventTable, renderEventEditPanel, renderLatestEventsTable, panAndZoomToEvent, newEventLabelInput);
+        }, getVisibleBuckets());
+    }, getVisibleBuckets());
 
-    allEventsData = await loadAndProcessEvents(visibleBuckets);
+    setAllEventsData(await loadAndProcessEvents(getVisibleBuckets()));
 
-    if (allEventsData.length === 0) {
+    if (getAllEventsData().length === 0) {
         document.body.innerHTML += "<p>No data found for initial buckets.</p>";
         return;
     }
 
-    colorRules = loadColorRules();
-
-    setupChart(allEventsData, chartWidth, chartHeight);
+    setupChart(getAllEventsData(), chartWidth, chartHeight);
 
     const infoPanel = window.d3.select(INFO_PANEL_SELECTOR);
     const editPanel = window.d3.select(EDIT_PANEL_SELECTOR);
@@ -105,19 +107,19 @@ async function main() {
     const colorRulesPanel = window.d3.select(COLOR_RULES_PANEL_SELECTOR);
     const colorRulesTextarea = window.d3.select(COLOR_RULES_TEXTAREA_SELECTOR);
 
-    renderEventPoints(allEventsData, infoPanel, editPanel, dataPre, renderEventTable, renderEventEditPanel, colorRules, getColorForEvent);
+    renderEventPoints(getAllEventsData(), infoPanel, editPanel, dataPre, renderEventTable, renderEventEditPanel);
     setupZoom();
 
     const latestEventsTable = window.d3.select("#latest-events-table");
-    renderLatestEventsTable(allEventsData, latestEventsTable, panAndZoomToEvent, newEventLabelInput);
+    renderLatestEventsTable(getAllEventsData(), latestEventsTable, panAndZoomToEvent, newEventLabelInput);
 
     setupZoomControls(svg, zoomToRange);
     const reportPanel = window.d3.select(REPORT_PANEL_SELECTOR);
     setupPanelDragging(infoPanel, editPanel, zoomPanel, window.d3.select("#bucket-filter-panel"), reportPanel, colorRulesPanel, calendarPanel);
     setupEscapeListener(infoPanel, editPanel, zoomPanel, reportPanel, colorRulesPanel, calendarPanel);
     setupEditControls(editPanel, async () => {
-        allEventsData = await loadAndProcessEvents(visibleBuckets);
-        await redrawTimeline(allEventsData, visibleBuckets, infoPanel, editPanel, dataPre, renderEventTable, renderEventEditPanel, renderLatestEventsTable, panAndZoomToEvent, newEventLabelInput, colorRules, getColorForEvent);
+        setAllEventsData(await loadAndProcessEvents(getVisibleBuckets()));
+        await redrawTimeline(getAllEventsData(), getVisibleBuckets(), infoPanel, editPanel, dataPre, renderEventTable, renderEventEditPanel, renderLatestEventsTable, panAndZoomToEvent, newEventLabelInput);
     }, svg, zoomBehavior);
 
     setupTimelineHoverInteraction(svg, editPanel);
@@ -125,17 +127,17 @@ async function main() {
     window.d3.select("#zoom-last-hour-option").dispatch('click');
 
     window.d3.select(COLOR_RULES_BUTTON_SELECTOR).on("click", () => {
-        renderColorRulesPanel(colorRules, colorRulesPanel, colorRulesTextarea);
+        renderColorRulesPanel(getColorRules(), colorRulesPanel, colorRulesTextarea);
     });
 
     window.d3.select(SAVE_COLOR_RULES_BUTTON_SELECTOR).on("click", async () => {
         const rulesText = colorRulesTextarea.property("value");
         saveColorRules(rulesText);
-        colorRules = loadColorRules(); // Reload parsed rules
+        setColorRules(loadColorRules()); // Reload parsed rules
         showNotification("Color rules saved!");
         colorRulesPanel.style("display", "none");
-        allEventsData = await loadAndProcessEvents(visibleBuckets);
-        await redrawTimeline(allEventsData, visibleBuckets, infoPanel, editPanel, dataPre, renderEventTable, renderEventEditPanel, renderLatestEventsTable, panAndZoomToEvent, newEventLabelInput, colorRules, getColorForEvent);
+        setAllEventsData(await loadAndProcessEvents(getVisibleBuckets()));
+        await redrawTimeline(getAllEventsData(), getVisibleBuckets(), infoPanel, editPanel, dataPre, renderEventTable, renderEventEditPanel, renderLatestEventsTable, panAndZoomToEvent, newEventLabelInput);
         renderCalendar();
     });
 
@@ -162,8 +164,8 @@ async function main() {
             showNotification(`Event "${label}" created successfully!`);
             labelInput.property("value", ""); // Clear input field
             // Update data and redraw timeline
-            allEventsData = await loadAndProcessEvents(visibleBuckets);
-            await redrawTimeline(allEventsData, visibleBuckets, infoPanel, editPanel, dataPre, renderEventTable, renderEventEditPanel, renderLatestEventsTable, panAndZoomToEvent, newEventLabelInput, colorRules, getColorForEvent);
+            setAllEventsData(await loadAndProcessEvents(getVisibleBuckets()));
+            await redrawTimeline(getAllEventsData(), getVisibleBuckets(), infoPanel, editPanel, dataPre, renderEventTable, renderEventEditPanel, renderLatestEventsTable, panAndZoomToEvent, newEventLabelInput);
         } catch (error) {
             showNotification("Failed to create event. Check console for details.");
             console.error("Failed to create new event:", error);
@@ -171,7 +173,7 @@ async function main() {
     });
 
     window.d3.select(GENERATE_REPORT_BUTTON_SELECTOR).on("click", () => {
-        const reportData = generateTaskReport(allEventsData);
+        const reportData = generateTaskReport(getAllEventsData());
         renderReportPanel(reportData, reportPanel, window.d3.select(REPORT_CONTENT_SELECTOR));
     });
 

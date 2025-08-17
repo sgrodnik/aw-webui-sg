@@ -1,3 +1,5 @@
+import { getAfkBucketId } from './state.js';
+
 /**
  * Processes stopwatch and AFK events to generate activity segments.
  * Each stopwatch event is split into segments based on overlapping AFK events.
@@ -6,6 +8,7 @@
  * @returns {Array<Object>} The array of stopwatch events, with an `activitySegments` property added to each.
  */
 export function calculateActivitySegments(stopwatchEvents, afkEvents) {
+    const afkBucketId = getAfkBucketId();
     return stopwatchEvents.map(swEvent => {
         const swStart = swEvent.timestamp.getTime();
         let swEnd = swStart + swEvent.duration * 1000;

@@ -1,4 +1,5 @@
 import { formatDuration } from './utils.js';
+import { getAfkBucketId } from './state.js';
 
 /**
  * Processes raw events to generate a task report.
@@ -9,6 +10,7 @@ export function generateTaskReport(allEvents) {
     const taskMap = new Map();
 
     const stopwatchEvents = allEvents.filter(e => e.bucket.startsWith('aw-stopwatch') && e.activitySegments);
+    const afkBucketId = getAfkBucketId();
 
     for (const swEvent of stopwatchEvents) {
         const label = swEvent.data.label || 'Untitled';

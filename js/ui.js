@@ -1,7 +1,8 @@
 
 import { toLocalISO, formatDuration } from './utils.js';
-import { deleteEvent, createEvent, afkBucketId } from './api.js';
+import { deleteEvent, createEvent } from './api.js';
 import { calculateActivitySegments } from './events.js';
+import { getAfkBucketId, getVisibleBuckets, setVisibleBuckets } from './state.js';
 
 const INFO_PANEL_SELECTOR = "#event-info-panel";
 const EDIT_PANEL_SELECTOR = "#event-edit-panel";
@@ -82,7 +83,7 @@ export function renderLatestEventsTable(events, container, zoomToEventCallback, 
     container.select("tbody").html("");
 
     const stopwatchEvents = events.filter(event => event.bucket.startsWith('aw-stopwatch'));
-    const afkEvents = events.filter(event => event.bucket === afkBucketId);
+    const afkEvents = events.filter(event => event.bucket === getAfkBucketId());
 
     const processedStopwatchEvents = calculateActivitySegments(stopwatchEvents, afkEvents);
 
@@ -400,21 +401,22 @@ export function renderBucketFilterPanel(buckets, onFilterChange, visibleBuckets)
         label.append("input")
             .attr("type", "checkbox")
             .attr("value", bucket.id)
-            .attr("checked", visibleBuckets.includes(bucket.id) ? true : null)
+            .attr("checked", getVisibleBuckets().includes(bucket.id) ? true : null)
             .on("change", function() {
                 const bucketId = d3.select(this).attr("value");
+                const currentVisibleBuckets = getVisibleBuckets();
                 if (this.checked) {
-                    if (!visibleBuckets.includes(bucketId)) {
-                        visibleBuckets.push(bucketId);
+                    if (!currentVisibleBuckets.includes(bucketId)) {
+                        setVisibleBuckets([...currentVisibleBuckets, bucketId]);
                     }
                 } else {
-                    const index = visibleBuckets.indexOf(bucketId);
+                    const index = currentVisibleBuckets.indexOf(bucketId);
                     if (index > -1) {
-                        visibleBuckets.splice(index, 1);
+                        setVisibleBuckets(currentVisibleBuckets.filter(id => id !== bucketId));
                     }
                 }
                 onFilterChange();
-                localStorage.setItem("visibleBuckets", JSON.stringify(visibleBuckets));
+                localStorage.setItem("visibleBuckets", JSON.stringify(getVisibleBuckets()));
             });
         label.append("span").text(`${bucket.id} (${bucket.count})`);
     });

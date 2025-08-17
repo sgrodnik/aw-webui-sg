@@ -1,5 +1,7 @@
 import { formatAbsoluteTime, formatRelativeTime, generateRelativeTimeTicks, toLocalISO, formatDuration, isColorDark } from './utils.js';
 import { getActiveTimeInput } from './ui.js';
+import { getAllEventsData, getVisibleBuckets, getColorRules } from './state.js';
+import { getColorForEvent } from './colorRules.js';
 
 const SVG_SELECTOR = "#timeline-svg";
 const TIMELINE_CONTAINER_SELECTOR = ".timeline-container";
@@ -93,11 +95,9 @@ function getEventLabel(d) {
  * @param {d3.Selection} dataPre - The D3 selection for the pre element to display data.
  * @param {function} renderEventTableCallback - Callback to render event info table.
  * @param {function} renderEventEditPanelCallback - Callback to render event edit panel.
- * @param {Array<Object>} colorRules - Array of color rule objects.
- * @param {function} getColorForEventCallback - Callback to get the color for an event.
  * @returns {d3.Selection} The D3 selection for the rendered event segments.
  */
-export function renderEventPoints(events, infoPanel, editPanel, dataPre, renderEventTableCallback, renderEventEditPanelCallback, colorRules, getColorForEventCallback) {
+export function renderEventPoints(events, infoPanel, editPanel, dataPre, renderEventTableCallback, renderEventEditPanelCallback) {
     const segments = g.selectAll(`.${EVENT_SEGMENT_CLASS}`)
         .data(events)
         .enter().append("g")
@@ -158,7 +158,7 @@ export function renderEventPoints(events, infoPanel, editPanel, dataPre, renderE
         const group = window.d3.select(this);
         group.selectAll(".event-body, .event-label").remove(); // Clear existing rects and labels
 
-        const customColor = getColorForEventCallback(d, colorRules);
+        const customColor = getColorForEvent(d, getColorRules());
 
         if (d.bucket.startsWith('aw-stopwatch') && d.activitySegments) {
             // Stopwatch events with segments
@@ -534,10 +534,8 @@ function resetHoverElements() {
  * @param {function} renderLatestEventsTableCallback - Callback to render latest events table.
  * @param {function} zoomToEventCallback - Callback to zoom/pan the timeline to a specific event.
  * @param {d3.Selection} newEventLabelInput - The D3 selection for the new event label input field.
- * @param {Array<Object>} colorRules - Array of color rule objects.
- * @param {function} getColorForEventCallback - Callback to get the color for an event.
  */
-export async function redrawTimeline(allEvents, visibleBuckets, infoPanel, editPanel, dataPre, renderEventTableCallback, renderEventEditPanelCallback, renderLatestEventsTableCallback, zoomToEventCallback, newEventLabelInput, colorRules, getColorForEventCallback) {
+export async function redrawTimeline(allEvents, visibleBuckets, infoPanel, editPanel, dataPre, renderEventTableCallback, renderEventEditPanelCallback, renderLatestEventsTableCallback, zoomToEventCallback, newEventLabelInput) {
     const filteredEvents = allEvents.filter(event => visibleBuckets.includes(event.bucket));
 
     g.selectAll("*").remove();
@@ -546,7 +544,7 @@ export async function redrawTimeline(allEvents, visibleBuckets, infoPanel, editP
 
     resetHoverElements();
 
-    renderEventPoints(filteredEvents, infoPanel, editPanel, dataPre, renderEventTableCallback, renderEventEditPanelCallback, colorRules, getColorForEventCallback);
+    renderEventPoints(filteredEvents, infoPanel, editPanel, dataPre, renderEventTableCallback, renderEventEditPanelCallback);
 
     setupZoom();
 

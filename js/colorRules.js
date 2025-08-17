@@ -1,3 +1,5 @@
+import { getColorRules, setColorRules } from './state.js';
+
 const COLOR_RULES_STORAGE_KEY = "colorRules";
 
 /**
@@ -40,6 +42,7 @@ export function loadColorRules() {
  */
 export function saveColorRules(rulesText) {
     localStorage.setItem(COLOR_RULES_STORAGE_KEY, rulesText);
+    setColorRules(loadColorRules()); // Update state after saving
 }
 
 /**

@@ -1,8 +1,9 @@
 import { setupPanelDragging, loadPanelPosition, setupEscapeListener } from './ui.js';
-import { fetchEventsForBucket, afkBucketId } from './api.js';
+import { fetchEventsForBucket } from './api.js';
 import { calculateActivitySegments } from './events.js';
 import { formatDuration, getFormattedDate, isColorDark } from './utils.js';
-import { loadColorRules, getColorForEvent } from './colorRules.js';
+import { getColorForEvent } from './colorRules.js';
+import { getAfkBucketId, getColorRules } from './state.js';
 
 const CALENDAR_PANEL_SELECTOR = "#calendar-panel";
 const CURRENT_MONTH_YEAR_SELECTOR = "#current-month-year";
@@ -14,7 +15,6 @@ const CALENDAR_WEEKDAYS_SELECTOR = "#calendar-weekdays"; // New selector
 let currentMonth;
 let currentYear;
 let activitySlotMap = new Map(); // Map to store activity label to its assigned slot index
-let colorRules = [];
 
 /**
  * Initializes the calendar by setting up event listeners and rendering the current month.
@@ -72,7 +72,6 @@ export function initCalendar() {
  * Renders the calendar grid for the current month and year.
  */
 export async function renderCalendar() {
-    colorRules = loadColorRules();
     const monthNames = ["January", "February", "March", "April", "May", "June",
         "July", "August", "September", "October", "November", "December"
     ];
@@ -101,11 +100,11 @@ export async function renderCalendar() {
     // Fetch and process real data
     const allEvents = await Promise.all([
         fetchEventsForBucket('aw-stopwatch', fetchStartDate, fetchEndDate),
-        fetchEventsForBucket(afkBucketId, fetchStartDate, fetchEndDate)
+        fetchEventsForBucket(getAfkBucketId(), fetchStartDate, fetchEndDate)
     ]).then(arrays => arrays.flat());
 
     const stopwatchEvents = allEvents.filter(e => e.bucket.startsWith('aw-stopwatch'));
-    const afkEvents = allEvents.filter(e => e.bucket === afkBucketId);
+    const afkEvents = allEvents.filter(e => e.bucket === getAfkBucketId());
 
     const processedEvents = calculateActivitySegments(stopwatchEvents, afkEvents);
 
@@ -172,7 +171,7 @@ export async function renderCalendar() {
 
         if (currentDay.getMonth() === currentMonth) {
             day.append("span").attr("class", "day-number").text(currentDay.getDate());
-            previousDaySlots = renderActivitiesForDay(day, currentDay, calendarData, activityDatesByLabel, previousDaySlots, colorRules);
+            previousDaySlots = renderActivitiesForDay(day, currentDay, calendarData, activityDatesByLabel, previousDaySlots);
         } else {
             day.classed("empty", true); // Mark as empty if not current month
             previousDaySlots.clear(); // Clear slots if moving to an empty day (e.g., end of month)
@@ -188,10 +187,9 @@ export async function renderCalendar() {
  * @param {Date} date - The date for which to render activities.
  * @param {Map<string, Set<string>>} activityDatesMap - Map of activity labels to their active dates.
  * @param {Map<string, number>} previousDaySlots - Map of activity labels to their assigned slot index from the previous day.
- * @param {Array} colorRules - Array of color rules.
  * @returns {Map<string, number>} A map of activity labels to their assigned slot index for the current day.
  */
-function renderActivitiesForDay(daySelection, date, calendarData, activityDatesMap, previousDaySlots, colorRules) {
+function renderActivitiesForDay(daySelection, date, calendarData, activityDatesMap, previousDaySlots) {
     const activitiesMap = new Map(); // Map to group activities by label
     const dateString = getFormattedDate(date);
     const currentDaySlots = new Map(); // Map to store activity label to its assigned slot index for the current day
@@ -267,7 +265,7 @@ function renderActivitiesForDay(daySelection, date, calendarData, activityDatesM
                 bucket: 'aw-stopwatch',
                 data: { label: activity.label }
             };
-            const customColor = getColorForEvent(eventData, colorRules);
+            const customColor = getColorForEvent(eventData, getColorRules());
 
             const activityRect = daySelection.append("div")
                 .attr("class", "activity-rectangle")
