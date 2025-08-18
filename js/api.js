@@ -1,6 +1,31 @@
 import { setAfkBucketId, getAfkBucketId } from './state.js';
+import { showNotification } from './notification.js';
 
 const API_BASE_URL = 'http://localhost:5600';
+
+/**
+ * Универсальная функция для выполнения API-запросов с глобальной обработкой ошибок.
+ * @param {string} url - URL для запроса.
+ * @param {Object} options - Опции для fetch-запроса.
+ * @returns {Promise<Response>} Promise, который разрешается в объект Response.
+ * @throws {Error} Если запрос не удался или вернул ошибку HTTP.
+ */
+async function apiFetch(url, options = {}) {
+    try {
+        const response = await fetch(url, options);
+        if (!response.ok) {
+            const errorText = `HTTP error: ${response.status} for ${url}`;
+            showNotification(`API Error: ${errorText}`, 5000);
+            throw new Error(errorText);
+        }
+        return response;
+    } catch (error) {
+        const errorMessage = `Network error or API error: ${error.message}`;
+        showNotification(`API Error: ${errorMessage}`, 5000);
+        console.error(errorMessage, error);
+        throw error;
+    }
+}
 
 /**
  * Fetches the count of events for a specific bucket.
@@ -9,10 +34,7 @@ const API_BASE_URL = 'http://localhost:5600';
  */
 export async function fetchEventCountForBucket(bucketName) {
     try {
-        const response = await fetch(`${API_BASE_URL}/api/0/buckets/${bucketName}/events/count`);
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
+        const response = await apiFetch(`${API_BASE_URL}/api/0/buckets/${bucketName}/events/count`);
         const data = await response.json();
         return data;
     } catch (error) {
@@ -27,10 +49,7 @@ export async function fetchEventCountForBucket(bucketName) {
  */
 export async function fetchBuckets() {
     try {
-        const response = await fetch(`${API_BASE_URL}/api/0/buckets/`);
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
+        const response = await apiFetch(`${API_BASE_URL}/api/0/buckets/`);
         const bucketsData = await response.json();
         const bucketIds = Object.keys(bucketsData);
 
@@ -67,10 +86,7 @@ export async function fetchEventsForBucket(bucketName, startDate, endDate) {
         url += `&end=${endDate.toISOString()}`;
     }
     try {
-        const response = await fetch(url);
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status} for bucket ${bucketName}`);
-        }
+        const response = await apiFetch(url);
         const events = await response.json();
 
         const processedEvents = events.map(d => {
@@ -124,8 +140,7 @@ export async function fetchAllEvents() {
 
 export async function deleteEvent(bucket, id) {
     try {
-        const response = await fetch(`${API_BASE_URL}/api/0/buckets/${bucket}/events/${id}`, { method: 'DELETE' });
-        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+        await apiFetch(`${API_BASE_URL}/api/0/buckets/${bucket}/events/${id}`, { method: 'DELETE' });
         console.log(`Event ${id} deleted successfully.`);
         return true;
     } catch (error) {
@@ -136,12 +151,11 @@ export async function deleteEvent(bucket, id) {
 
 export async function createEvent(bucket, eventData) {
     try {
-        const response = await fetch(`${API_BASE_URL}/api/0/buckets/${bucket}/events`, {
+        const response = await apiFetch(`${API_BASE_URL}/api/0/buckets/${bucket}/events`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(eventData)
         });
-        if (!response.ok) throw new Error(`HTTP error creating event! status: ${response.status}`);
         console.log('New event created successfully:', await response.json());
         return true;
     } catch (error) {
