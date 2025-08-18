@@ -1,9 +1,10 @@
 import { fetchEventsForBucket } from './api.js';
 import { calculateActivitySegments } from './events.js';
-import { formatDuration, getFormattedDate, isColorDark } from './utils.js';
-import { getColorForEvent } from './colorRules.js';
 import { getAfkBucketId, getColorRules } from './state.js';
 import { setupPanelDragging, loadPanelPosition, setupEscapeListener } from './panelManager.js';
+import { getCurrentMonth, setCurrentMonth, getCurrentYear, setCurrentYear, getActivitySlotMap, setActivitySlotMap, clearActivitySlotMap } from './calendarState.js';
+import { renderActivitiesForDay } from './calendarRenderer.js';
+import { getFormattedDate } from './utils.js';
 
 const CALENDAR_PANEL_SELECTOR = "#calendar-panel";
 const CURRENT_MONTH_YEAR_SELECTOR = "#current-month-year";
@@ -11,10 +12,6 @@ const PREV_MONTH_BUTTON_SELECTOR = "#prev-month-button";
 const NEXT_MONTH_BUTTON_SELECTOR = "#next-month-button";
 const CALENDAR_GRID_SELECTOR = "#calendar-grid";
 const CALENDAR_WEEKDAYS_SELECTOR = "#calendar-weekdays"; // New selector
-
-let currentMonth;
-let currentYear;
-let activitySlotMap = new Map(); // Map to store activity label to its assigned slot index
 
 /**
  * Initializes the calendar by setting up event listeners and rendering the current month.
@@ -25,41 +22,49 @@ export function initCalendar() {
     setupPanelDragging(calendarPanel);
 
     const today = new Date();
-    currentMonth = today.getMonth();
-    currentYear = today.getFullYear();
+    setCurrentMonth(today.getMonth());
+    setCurrentYear(today.getFullYear());
 
     renderCalendar();
 
     // Store initial month and year to detect changes
-    let lastRenderedMonth = currentMonth;
-    let lastRenderedYear = currentYear;
+    let lastRenderedMonth = getCurrentMonth();
+    let lastRenderedYear = getCurrentYear();
 
     window.d3.select(PREV_MONTH_BUTTON_SELECTOR).on("click", () => {
-        currentMonth--;
-        if (currentMonth < 0) {
-            currentMonth = 11;
-            currentYear--;
+        let newMonth = getCurrentMonth() - 1;
+        let newYear = getCurrentYear();
+        if (newMonth < 0) {
+            newMonth = 11;
+            newYear--;
         }
+        setCurrentMonth(newMonth);
+        setCurrentYear(newYear);
+
         // Clear activitySlotMap if month or year changed
-        if (currentMonth !== lastRenderedMonth || currentYear !== lastRenderedYear) {
-            activitySlotMap.clear();
-            lastRenderedMonth = currentMonth;
-            lastRenderedYear = currentYear;
+        if (getCurrentMonth() !== lastRenderedMonth || getCurrentYear() !== lastRenderedYear) {
+            clearActivitySlotMap();
+            lastRenderedMonth = getCurrentMonth();
+            lastRenderedYear = getCurrentYear();
         }
         renderCalendar();
     });
 
     window.d3.select(NEXT_MONTH_BUTTON_SELECTOR).on("click", () => {
-        currentMonth++;
-        if (currentMonth > 11) {
-            currentMonth = 0;
-            currentYear++;
+        let newMonth = getCurrentMonth() + 1;
+        let newYear = getCurrentYear();
+        if (newMonth > 11) {
+            newMonth = 0;
+            newYear++;
         }
+        setCurrentMonth(newMonth);
+        setCurrentYear(newYear);
+
         // Clear activitySlotMap if month or year changed
-        if (currentMonth !== lastRenderedMonth || currentYear !== lastRenderedYear) {
-            activitySlotMap.clear();
-            lastRenderedMonth = currentMonth;
-            lastRenderedYear = currentYear;
+        if (getCurrentMonth() !== lastRenderedMonth || getCurrentYear() !== lastRenderedYear) {
+            clearActivitySlotMap();
+            lastRenderedMonth = getCurrentMonth();
+            lastRenderedYear = getCurrentYear();
         }
         renderCalendar();
     });
@@ -75,6 +80,8 @@ export async function renderCalendar() {
     const monthNames = ["January", "February", "March", "April", "May", "June",
         "July", "August", "September", "October", "November", "December"
     ];
+    const currentMonth = getCurrentMonth();
+    const currentYear = getCurrentYear();
     window.d3.select(CURRENT_MONTH_YEAR_SELECTOR).text(`${monthNames[currentMonth]} ${currentYear}`);
 
     const calendarGrid = window.d3.select(CALENDAR_GRID_SELECTOR);
@@ -179,155 +186,4 @@ export async function renderCalendar() {
 
         currentDay.setDate(currentDay.getDate() + 1); // Move to the next day
     }
-}
-
-/**
- * Renders activities for a specific day in the calendar.
- * @param {d3.Selection} daySelection - The D3 selection for the calendar day cell.
- * @param {Date} date - The date for which to render activities.
- * @param {Map<string, Set<string>>} activityDatesMap - Map of activity labels to their active dates.
- * @param {Map<string, number>} previousDaySlots - Map of activity labels to their assigned slot index from the previous day.
- * @returns {Map<string, number>} A map of activity labels to their assigned slot index for the current day.
- */
-function renderActivitiesForDay(daySelection, date, calendarData, activityDatesMap, previousDaySlots) {
-    const activitiesMap = new Map(); // Map to group activities by label
-    const dateString = getFormattedDate(date);
-    const currentDaySlots = new Map(); // Map to store activity label to its assigned slot index for the current day
-
-    calendarData.forEach(activity => {
-        let totalDurationForActivity = 0;
-        activity.activitySegments.forEach(segment => {
-            const segmentDate = new Date(segment[0]);
-            if (getFormattedDate(segmentDate) === dateString) {
-                totalDurationForActivity += segment[1];
-            }
-        });
-
-        if (totalDurationForActivity > 0) {
-            activitiesMap.set(activity.label, {
-                label: activity.label,
-                duration: totalDurationForActivity,
-                activity: activity // Store the full activity object
-            });
-        }
-    });
-
-    let activitiesForDay = Array.from(activitiesMap.values());
-
-    // Determine occupied slots for the current day
-    const occupiedSlots = new Set();
-    const activitiesToAssignNewSlot = [];
-
-    // First, assign slots for activities that were present yesterday
-    activitiesForDay.forEach(activity => {
-        if (previousDaySlots.has(activity.label)) {
-            const assignedSlot = previousDaySlots.get(activity.label);
-            currentDaySlots.set(activity.label, assignedSlot);
-            occupiedSlots.add(assignedSlot);
-        } else {
-            activitiesToAssignNewSlot.push(activity);
-        }
-    });
-
-    // Sort new activities by duration (or any other criteria if needed)
-    activitiesToAssignNewSlot.sort((a, b) => b.duration - a.duration);
-
-    // Assign slots for new activities
-    let currentSlotIndex = 0;
-    activitiesToAssignNewSlot.forEach(activity => {
-        while (occupiedSlots.has(currentSlotIndex)) {
-            currentSlotIndex++;
-        }
-        const assignedSlot = currentSlotIndex;
-        currentDaySlots.set(activity.label, assignedSlot);
-        occupiedSlots.add(assignedSlot);
-        currentSlotIndex++;
-    });
-
-    // Sort activities for rendering based on their assigned slots
-    activitiesForDay.sort((a, b) => currentDaySlots.get(a.label) - currentDaySlots.get(b.label));
-
-    // Create a map for quick lookup of activities by slot
-    const activitiesBySlot = new Map();
-    let maxSlot = -1;
-    activitiesForDay.forEach(activity => {
-        const assignedSlot = currentDaySlots.get(activity.label);
-        activitiesBySlot.set(assignedSlot, activity);
-        if (assignedSlot > maxSlot) maxSlot = assignedSlot;
-    });
-
-    // Render activities and placeholders based on assigned slots
-    for (let slotIndex = 0; slotIndex <= maxSlot; slotIndex++) {
-        const activity = activitiesBySlot.get(slotIndex);
-
-        if (activity) {
-            const eventData = {
-                bucket: 'aw-stopwatch',
-                data: { label: activity.label }
-            };
-            const customColor = getColorForEvent(eventData, getColorRules());
-
-            const activityRect = daySelection.append("div")
-                .attr("class", "activity-rectangle")
-                .attr("data-activity-label", activity.label)
-                .attr("title", `${activity.label} (${formatDuration(activity.duration, false)})`)
-                .style("order", slotIndex) // Use slotIndex for order
-                .style("background-color", customColor)
-                .style("color", customColor && isColorDark(customColor) ? "white" : "black")
-                .on("mouseover", function () {
-                    const label = window.d3.select(this).attr("data-activity-label");
-                    window.d3.selectAll(`.activity-rectangle[data-activity-label="${label.replace(/"/g, '\\"')}"]`)
-                        .classed("highlight-same-name", true);
-                })
-                .on("mouseout", function () {
-                    const label = window.d3.select(this).attr("data-activity-label");
-                    window.d3.selectAll(`.activity-rectangle[data-activity-label="${label.replace(/"/g, '\\"')}"]`)
-                        .classed("highlight-same-name", false);
-                });
-
-
-            // Determine if the activity continues from yesterday or to tomorrow
-            const yesterday = new Date(date);
-            yesterday.setDate(date.getDate() - 1);
-            const yesterdayString = getFormattedDate(yesterday);
-
-            const tomorrow = new Date(date);
-            tomorrow.setDate(date.getDate() + 1);
-            const tomorrowString = getFormattedDate(tomorrow);
-
-            const activityActiveDates = activityDatesMap.get(activity.label);
-            const continuesFromYesterday = activityActiveDates && activityActiveDates.has(yesterdayString);
-            const continuesToTomorrow = activityActiveDates && activityActiveDates.has(tomorrowString);
-
-            if (continuesFromYesterday) {
-                activityRect.classed("continues-from-yesterday", true);
-            }
-            if (continuesToTomorrow) {
-                activityRect.classed("continues-to-tomorrow", true);
-            }
-
-            const isMonday = date.getDay() === 1; // 1 for Monday
-            const isSunday = date.getDay() === 0; // 0 for Sunday
-
-            // Добавить класс для поднятия элемента, если задача продолжается на следующий день
-            // и это первый день многодневной задачи ИЛИ понедельник, и не воскресенье
-            if (continuesToTomorrow && (!continuesFromYesterday || isMonday) && !isSunday) {
-                activityRect.classed("activity-elevated", true);
-            }
-
-            // Скрыть имя задачи, если она продолжается со вчерашнего дня и сегодня не понедельник
-            if (!continuesFromYesterday || isMonday) {
-                activityRect.append("div")
-                    .attr("class", "activity-label")
-                    .text(activity.label);
-            }
-        } else {
-            // Render a placeholder for empty slots
-            daySelection.append("div")
-                .attr("class", "activity-placeholder")
-                .style("order", slotIndex); // Use slotIndex for order
-        }
-    }
-
-    return currentDaySlots; // Return the slots for the current day
 }
