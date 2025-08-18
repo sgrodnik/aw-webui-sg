@@ -1,0 +1,2 @@
+let currentMonth;
+let currentYear;

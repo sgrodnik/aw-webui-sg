@@ -1,8 +1,10 @@
 
 import { fetchBuckets, fetchEventsForBucket, createEvent } from './api.js';
-import { setupChart, renderEventPoints, setupZoom, zoomToRange, redrawTimeline, panAndZoomToEvent, svg, g, xScale, yScale, xAxisGroup, xAxisTopGroup, timeExtent, zoomBehavior, width, height } from './timeline.js';
+import { setupChart, setupZoom, redrawTimeline, svg, g, xScale, yScale, xAxisGroup, xAxisTopGroup, timeExtent, zoomBehavior, width, height } from './timeline.js';
+import { renderEventPoints } from './timelineRenderer.js';
+import { panAndZoomToEvent, zoomToRange } from './timelineInteraction.js';
 import { renderEventTable, renderLatestEventsTable, setupZoomControls } from './ui.js';
-import { setupTimelineHoverInteraction } from './timeline.js';
+import { setupTimelineHoverInteraction } from './timelineInteraction.js';
 import { calculateActivitySegments } from './events.js';
 import { generateTaskReport } from './report.js';
 import { loadColorRules, saveColorRules } from './colorRules.js';
@@ -110,7 +112,7 @@ async function main() {
     const colorRulesPanel = window.d3.select(COLOR_RULES_PANEL_SELECTOR);
     const colorRulesTextarea = window.d3.select(COLOR_RULES_TEXTAREA_SELECTOR);
 
-    renderEventPoints(getAllEventsData(), infoPanel, editPanel, dataPre, renderEventTable, renderEventEditPanel);
+    renderEventPoints(getAllEventsData(), infoPanel, editPanel, dataPre, renderEventTable, renderEventEditPanel, panAndZoomToEvent, getColorRules);
     setupZoom();
 
     const latestEventsTable = window.d3.select("#latest-events-table");
