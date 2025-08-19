@@ -201,3 +201,44 @@ export function isColorDark(hexColor) {
     const L = (0.2126 * c[0]) + (0.7152 * c[1]) + (0.0722 * c[2]);
     return L <= 0.179;
 }
+
+/**
+ * Calculates hourly non-AFK activity data for a given day.
+ * @param {Array<Object>} afkEvents - An array of AFK events.
+ * @param {Date} date - The date for which to calculate hourly data.
+ * @returns {Array<number>} An array of 24 numbers, where each number represents
+ *                          the minutes of non-AFK activity for that hour (0-59),
+ *                          capped at 60.
+ */
+export function getHourlyAfkData(afkEvents, date) {
+    const hourlyData = Array(24).fill(0);
+    const targetDateString = getFormattedDate(date);
+
+    afkEvents.forEach(event => {
+        const eventStart = new Date(event.timestamp);
+        const eventEnd = new Date(event.timestamp.getTime() + event.duration * 1000);
+
+        // Only consider events that overlap with the target date
+        if (getFormattedDate(eventStart) === targetDateString || getFormattedDate(eventEnd) === targetDateString ||
+            (eventStart < date && eventEnd > new Date(date.getFullYear(), date.getMonth(), date.getDate() + 1))) {
+
+            let currentMinute = new Date(eventStart);
+            while (currentMinute < eventEnd) {
+                if (getFormattedDate(currentMinute) === targetDateString) {
+                    const hour = currentMinute.getHours();
+                    // Only count if status is 'not-afk'
+                    if (event.data.status === 'not-afk') {
+                        hourlyData[hour] = Math.min(60, hourlyData[hour] + 1);
+                    }
+                }
+                currentMinute.setMinutes(currentMinute.getMinutes() + 1);
+                // Break if we cross into the next day to avoid infinite loops for long events
+                if (currentMinute.getMinutes() === 0 && currentMinute.getSeconds() === 0 && getFormattedDate(currentMinute) !== targetDateString) {
+                    break;
+                }
+            }
+        }
+    });
+
+    return hourlyData;
+}

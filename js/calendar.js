@@ -178,7 +178,7 @@ export async function renderCalendar() {
 
         if (currentDay.getMonth() === currentMonth) {
             day.append("span").attr("class", "day-number").text(currentDay.getDate());
-            previousDaySlots = renderActivitiesForDay(day, currentDay, calendarData, activityDatesByLabel, previousDaySlots);
+            previousDaySlots = renderActivitiesForDay(day, currentDay, calendarData, activityDatesByLabel, previousDaySlots, afkEvents);
         } else {
             day.classed("empty", true); // Mark as empty if not current month
             previousDaySlots.clear(); // Clear slots if moving to an empty day (e.g., end of month)

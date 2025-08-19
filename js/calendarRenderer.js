@@ -1,4 +1,4 @@
-import { formatDuration, getFormattedDate, isColorDark } from './utils.js';
+import { formatDuration, getFormattedDate, isColorDark, getHourlyAfkData } from './utils.js';
 import { getColorForEvent } from './colorRules.js';
 import { getColorRules } from './state.js';
 import { getActivitySlotMap } from './calendarState.js'; // Import from new state module
@@ -10,9 +10,10 @@ import { getActivitySlotMap } from './calendarState.js'; // Import from new stat
  * @param {Array<Object>} calendarData - Array of activity data for the calendar.
  * @param {Map<string, Set<string>>} activityDatesMap - Map of activity labels to their active dates.
  * @param {Map<string, number>} previousDaySlots - Map of activity labels to their assigned slot index from the previous day.
+ * @param {Array<Object>} afkEvents - Array of AFK events for the calendar.
  * @returns {Map<string, number>} A map of activity labels to their assigned slot index for the current day.
  */
-export function renderActivitiesForDay(daySelection, date, calendarData, activityDatesMap, previousDaySlots) {
+export function renderActivitiesForDay(daySelection, date, calendarData, activityDatesMap, previousDaySlots, afkEvents) {
     const activitiesMap = new Map(); // Map to group activities by label
     const dateString = getFormattedDate(date);
     const currentDaySlots = new Map(); // Map to store activity label to its assigned slot index for the current day
@@ -151,6 +152,17 @@ export function renderActivitiesForDay(daySelection, date, calendarData, activit
                 .style("order", slotIndex); // Use slotIndex for order
         }
     }
+
+    // Render hourly activity histogram
+    const hourlyAfkData = getHourlyAfkData(afkEvents, date);
+    const histogramContainer = daySelection.append("div")
+        .attr("class", "hourly-activity-histogram");
+
+    hourlyAfkData.forEach(minutes => {
+        histogramContainer.append("div")
+            .attr("class", "histogram-bar")
+            .style("height", `${(minutes / 60) * 100}%`); // Height based on minutes (max 60)
+    });
 
     return currentDaySlots; // Return the slots for the current day
 }
