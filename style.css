@@ -81,6 +81,10 @@ h1 {
     background-color: #0056b3;
 }
 
+.button-group button:not(:last-child) {
+    margin-right: 5px;
+}
+
 .button-group .delete {
     background-color: #dc3545;
     color: white;
@@ -375,6 +379,7 @@ h1 {
     width: 100%;
     border-collapse: collapse;
     margin-top: 10px;
+    margin-bottom: 15px;
     font-size: 12px;
 }
 
