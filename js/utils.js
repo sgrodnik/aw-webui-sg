@@ -60,7 +60,7 @@ export function generateRelativeTimeTicks(currentXScale, width, now = new Date()
  * @param {Date} now - The current reference date (defaults to current time).
  * @returns {string} The relative time string.
  */
-export function formatRelativeTime(date, now = new Date()) {
+export function formatRelativeTime(date, now = new Date(), shortFormat = false) {
     const sec = Math.floor((now.getTime() - date.getTime()) / 1000);
     const sign = sec < 0 ? "-" : "";
     const seconds = Math.abs(sec);
@@ -71,15 +71,25 @@ export function formatRelativeTime(date, now = new Date()) {
     if (minutes < 60) return `${sign}${minutes}m `;
 
     const hours = Math.floor(minutes / 60);
-    if (hours < 24) return `${sign}${hours}h ${minutes % 60}m `.replaceAll(" 0m", "");
+    if (hours < 24) {
+        if (shortFormat) return `${sign}${hours}h `;
+        return `${sign}${hours}h ${minutes % 60}m `.replaceAll(" 0m", "");
+    }
 
     const days = Math.floor(minutes / (60 * 24));
-    if (days < 30) return `${sign}${days}d ${hours % 24}h `.replaceAll(" 0h", "");
+    if (days < 30) {
+        if (shortFormat) return `${sign}${days}d `;
+        return `${sign}${days}d ${hours % 24}h `.replaceAll(" 0h", "");
+    }
 
     const months = Math.floor(days / 30);
-    if (months < 12) return `${sign}${months}M ${days % 30}d `.replaceAll(" 0d", "");
+    if (months < 12) {
+        if (shortFormat) return `${sign}${months}M `;
+        return `${sign}${months}M ${days % 30}d `.replaceAll(" 0d", "");
+    }
 
     const years = Math.floor(months / 12);
+    if (shortFormat) return `${sign}${years}y `;
     return `${sign}${years}y ${months % 12}M `;
 }
 
@@ -121,6 +131,20 @@ export function toLocalISO(date) {
     const minutes = String(date.getMinutes()).padStart(2, '0');
     const seconds = String(date.getSeconds()).padStart(2, '0');
     return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+}
+
+/**
+ * Formats a Date object into a YYYY.MM.DD HH.MM string.
+ * @param {Date} date - The Date object to format.
+ * @returns {string} The formatted date-time string.
+ */
+export function formatDateTime(date) {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    const hours = String(date.getHours()).padStart(2, '0');
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+    return `${year}.${month}.${day} ${hours}.${minutes}`;
 }
 
 export function formatDuration(seconds, includeSeconds = true) {

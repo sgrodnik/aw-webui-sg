@@ -1,5 +1,5 @@
 
-import { toLocalISO, formatDuration } from './utils.js';
+import { toLocalISO, formatDuration, formatRelativeTime, formatDateTime } from './utils.js';
 import { calculateActivitySegments } from './events.js';
 import { getAfkBucketId, getVisibleBuckets, setVisibleBuckets } from './state.js';
 import { showNotification } from './notification.js';
@@ -66,7 +66,7 @@ export function renderLatestEventsTable(events, container, zoomToEventCallback, 
 
     const processedStopwatchEvents = calculateActivitySegments(stopwatchEvents, afkEvents);
 
-    const latestEvents = processedStopwatchEvents.sort((a, b) => b.timestamp - a.timestamp).slice(0, 15);
+    const latestEvents = processedStopwatchEvents.sort((a, b) => (b.timestamp.getTime() + b.duration * 1000) - (a.timestamp.getTime() + a.duration * 1000)).slice(0, 15);
 
     latestEvents.forEach(event => {
         const row = container.select("tbody").append("tr")
@@ -87,9 +87,10 @@ export function renderLatestEventsTable(events, container, zoomToEventCallback, 
                 }
             });
 
-        row.append("td").text(event.timestamp.toLocaleString('en-US'));
+        const endTime = new Date(event.timestamp.getTime() + event.duration * 1000);
+        const startTime = formatDateTime(event.timestamp);
         const status = event.data.running ? " ⏳" : "";
-        row.append("td").text(formatDuration(event.duration) + status);
+        row.append("td").html(`<span class="ligth-font">${startTime}</span>, ${formatRelativeTime(endTime, new Date(), true)} ago ${status}`);
 
         let nonAfkDuration = 0;
         if (event.activitySegments) {
@@ -97,7 +98,9 @@ export function renderLatestEventsTable(events, container, zoomToEventCallback, 
                 .filter(segment => segment.status === 'not-afk')
                 .reduce((sum, segment) => sum + segment.duration, 0);
         }
-        row.append("td").text(formatDuration(nonAfkDuration, false)); // Display non-afk duration without seconds
+        const eventDurationF = formatDuration(event.duration);
+        const nonAfkDurationF = formatDuration(nonAfkDuration, false);
+        row.append("td").html(`${nonAfkDurationF} <span class="ligth-font">(${eventDurationF})</span>`);
 
         row.append("td").text(`${event.data.label || event.data.status || "N/A"}`);
     });
