@@ -221,6 +221,7 @@ export function setupEditControls(editPanel, onSaveCallback, svg, zoomBehavior) 
                     duration: duration1,
                     data: { ...originalEvent.data, label: title1 }
                 };
+                firstEvent.data.running = false;
 
                 const secondEvent = {
                     timestamp: startTime2.toISOString(),
