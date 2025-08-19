@@ -69,9 +69,6 @@ async function main() {
 
     setColorRules(loadColorRules());
 
-    const calendarPanel = window.d3.select(CALENDAR_PANEL_SELECTOR);
-    initCalendar();
-
     const savedVisibleBuckets = localStorage.getItem("visibleBuckets");
     if (savedVisibleBuckets) {
         try {
@@ -117,6 +114,8 @@ async function main() {
 
     const latestEventsTable = window.d3.select("#latest-events-table");
     renderLatestEventsTable(getAllEventsData(), latestEventsTable, panAndZoomToEvent, newEventLabelInput);
+
+    const calendarPanel = window.d3.select(CALENDAR_PANEL_SELECTOR);
 
     setupZoomControls(svg, zoomToRange);
     const reportPanel = window.d3.select(REPORT_PANEL_SELECTOR);
@@ -183,6 +182,8 @@ async function main() {
     });
 
     window.d3.select(OPEN_CALENDAR_BUTTON_SELECTOR).on("click", () => {
+        if (calendarPanel.style("display") === "none")
+            initCalendar();
         calendarPanel.style("display", calendarPanel.style("display") === "none" ? "block" : "none");
     });
 }

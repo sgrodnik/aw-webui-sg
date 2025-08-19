@@ -631,7 +631,6 @@ h1 {
 
 .calendar-weekdays {
     display: grid;
-    grid-template-columns: 50px repeat(7, 100px); /* Week number column + 7 days with fixed width */
     font-weight: bold;
     /* margin-bottom: 10px; */ /* Removed margin-bottom */
     text-align: center;
@@ -644,7 +643,7 @@ h1 {
 
 .calendar-grid {
     display: grid;
-    grid-template-columns: 50px repeat(7, 100px); /* Week number column + 7 days with fixed width */
+    grid-template-columns: 50px repeat(7, 110px); /* Week number column + 7 days with fixed width */
     gap: 1px;
     padding-top: 5px; /* Added padding-top to compensate for removed margin-bottom */
 }
@@ -654,7 +653,7 @@ h1 {
     border: 1px solid black;
     padding: 1px; /* Reduced padding for the day cell */
     text-align: center;
-    min-height: 80px; /* Adjust as needed */
+    min-height: 120px; /* Adjust as needed */
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -699,7 +698,7 @@ h1 {
 .activity-rectangle,
 .activity-placeholder {
     width: calc(100% - 0px); /* Full width of the day cell minus padding (2px left + 2px right) */
-    height: 20px; /* Fixed height for each activity */
+    height: 16px; /* Fixed height for each activity */
     background-color: #ffffff; /* White background */
     margin-bottom: 1px; /* Small gap between rectangles */
     border: 1px solid black; /* Black border */
