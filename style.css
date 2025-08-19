@@ -682,7 +682,7 @@ h1 {
 .calendar-day .day-number {
     position: absolute;
     margin: auto;
-    bottom: 0px;
+    bottom: 20px;
 }
 
 .calendar-week-number,
@@ -766,7 +766,34 @@ h1 {
 
 .histogram-bar {
     flex-grow: 1;
-    background-color: #4caf4f79;
+    background-color: #0303034a;
     margin: 0 0.5px;
     min-width: 0;
+}
+
+.activity-start-time,
+.activity-end-time,
+.activity-total-duration {
+    position: absolute;
+    font-size: 9px; /* Smaller font size for overlay text */
+    font-weight: bold;
+    z-index: 2; /* Ensure it's above histogram bars */
+    white-space: nowrap;
+    pointer-events: none; /* Allow clicks to pass through to elements below */
+}
+
+.activity-start-time {
+    top: 0px; /* Position at the top of the histogram container */
+    left: 1px;
+}
+
+.activity-end-time {
+    top: 0px; /* Position at the top of the histogram container */
+    right: 1px;
+}
+
+.activity-total-duration {
+    bottom: 0px; /* Position at the bottom of the histogram container */
+    left: 50%;
+    transform: translateX(-50%); /* Center horizontally */
 }

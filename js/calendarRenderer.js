@@ -38,6 +38,27 @@ export function renderActivitiesForDay(daySelection, date, calendarData, activit
 
     let activitiesForDay = Array.from(activitiesMap.values());
 
+    let firstActivityTime = null;
+    let lastActivityTime = null;
+    let totalDayActivityDuration = 0;
+
+    // Calculate first/last activity time and total duration for the day from afkEvents
+    afkEvents.forEach(event => {
+        const eventStart = new Date(event.timestamp);
+        const eventEnd = new Date(event.timestamp.getTime() + event.duration * 1000);
+
+        // Only consider events that overlap with the target date and are 'not-afk'
+        if (getFormattedDate(eventStart) === dateString && event.data.status === 'not-afk') {
+            if (!firstActivityTime || eventStart < firstActivityTime) {
+                firstActivityTime = eventStart;
+            }
+            if (!lastActivityTime || eventEnd > lastActivityTime) {
+                lastActivityTime = eventEnd;
+            }
+            totalDayActivityDuration += event.duration;
+        }
+    });
+
     // Determine occupied slots for the current day
     const occupiedSlots = new Set();
     const activitiesToAssignNewSlot = [];
@@ -163,6 +184,26 @@ export function renderActivitiesForDay(daySelection, date, calendarData, activit
             .attr("class", "histogram-bar")
             .style("height", `${(minutes / 60) * 100}%`); // Height based on minutes (max 60)
     });
+
+    if (firstActivityTime && lastActivityTime) {
+        const formatTime = (d) => {
+            const hours = String(d.getHours()).padStart(2, '0');
+            const minutes = String(d.getMinutes()).padStart(2, '0');
+            return `${hours}:${minutes}`;
+        };
+
+        histogramContainer.append("div")
+            .attr("class", "activity-start-time")
+            .text(formatTime(firstActivityTime));
+
+        histogramContainer.append("div")
+            .attr("class", "activity-end-time")
+            .text(formatTime(lastActivityTime));
+
+        histogramContainer.append("div")
+            .attr("class", "activity-total-duration")
+            .text(formatDuration(totalDayActivityDuration, false));
+    }
 
     return currentDaySlots; // Return the slots for the current day
 }
