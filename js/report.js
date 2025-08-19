@@ -53,7 +53,7 @@ export function generateTaskReport(allEvents) {
             .map(([date, duration]) => {
                 const dateObj = new Date(date);
                 const day = dateObj.getDate();
-                const month = dateObj.toLocaleString('en-US', { month: 'long' });
+                const month = dateObj.toLocaleString('en-US', { month: 'short' });
                 return `${day} ${month}: ${formatDuration(duration, false)}`;
             });
 
