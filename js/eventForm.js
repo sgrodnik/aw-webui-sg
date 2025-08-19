@@ -3,7 +3,7 @@
  * @module eventForm
  */
 
-import { toLocalISO } from './utils.js';
+import { formatDuration, toLocalISO } from './utils.js';
 import { deleteEvent, createEvent } from './api.js';
 import { showNotification } from './notification.js'; // Импортируем showNotification
 
@@ -24,6 +24,7 @@ export function renderEventEditPanel(eventData, container, isSplitMode = false) 
     tbody.append("tr").html(`<td>ID:</td><td><input type="text" value="${eventData.id}" readonly></td>`);
     tbody.append("tr").html(`<td>Bucket:</td><td><input type="text" value="${eventData.bucket}" readonly></td>`);
     tbody.append("tr").html(`<td>Title:</td><td><input type="text" id="edit-title-input" value="${eventData.data.label || ''}"></td>`);
+    tbody.append("tr").html(`<td>Duration:</td><td><input type="text" value="${formatDuration(eventData.duration) }" readonly></td>`);
 
     const startTime = eventData.timestamp;
     let endTime = new Date(startTime.getTime() + eventData.duration * 1000);

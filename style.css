@@ -249,7 +249,7 @@ h1 {
     z-index: 1000;
     cursor: grab;
     width: 300px;
-    max-height: 300px;
+    max-height: 500px;
     overflow-y: auto;
 }
 

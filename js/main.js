@@ -127,7 +127,7 @@ async function main() {
         await redrawTimeline(getAllEventsData(), getVisibleBuckets(), infoPanel, editPanel, dataPre, renderEventTable, renderEventEditPanel, renderLatestEventsTable, panAndZoomToEvent, newEventLabelInput);
     }, svg, zoomBehavior);
 
-    setupTimelineHoverInteraction(svg, editPanel);
+    setupTimelineHoverInteraction(editPanel);
 
     window.d3.select("#zoom-last-hour-option").dispatch('click');
 
