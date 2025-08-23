@@ -169,6 +169,16 @@ export function formatDuration(seconds, includeSeconds = true) {
 }
 
 /**
+ * Formats a duration in seconds to decimal hours.
+ * @param {number} duration - The duration in seconds.
+ * @returns {string} The duration formatted as decimal hours.
+ */
+export function formatDurationToDecimalHours(duration) {
+    const hours = duration / 3600;
+    return `${hours.toFixed(1)}h`;
+}
+
+/**
  * Formats a Date object into a YYYY-MM-DD string.
  * @param {Date} date - The Date object to format.
  * @returns {string} The formatted date string (e.g., "2025-08-15").

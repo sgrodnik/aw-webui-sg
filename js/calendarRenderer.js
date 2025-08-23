@@ -1,4 +1,4 @@
-import { formatDuration, getFormattedDate, isColorDark, getHourlyAfkData } from './utils.js';
+import { formatDuration, getFormattedDate, isColorDark, getHourlyAfkData, formatDurationToDecimalHours } from './utils.js';
 import { getColorForEvent } from './colorRules.js';
 import { getColorRules } from './state.js';
 import { getActivitySlotMap } from './calendarState.js'; // Import from new state module
@@ -202,7 +202,7 @@ export function renderActivitiesForDay(daySelection, date, calendarData, activit
 
         daySelection.append("div")
             .attr("class", "activity-total-duration")
-            .text(formatDuration(totalDayActivityDuration, false));
+            .text(formatDurationToDecimalHours(totalDayActivityDuration));
     }
 
     return currentDaySlots; // Return the slots for the current day
