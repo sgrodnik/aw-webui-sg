@@ -192,15 +192,15 @@ export function renderActivitiesForDay(daySelection, date, calendarData, activit
             return `${hours}:${minutes}`;
         };
 
-        histogramContainer.append("div")
+        daySelection.append("div")
             .attr("class", "activity-start-time")
             .text(formatTime(firstActivityTime));
 
-        histogramContainer.append("div")
+        daySelection.append("div")
             .attr("class", "activity-end-time")
             .text(formatTime(lastActivityTime));
 
-        histogramContainer.append("div")
+        daySelection.append("div")
             .attr("class", "activity-total-duration")
             .text(formatDuration(totalDayActivityDuration, false));
     }

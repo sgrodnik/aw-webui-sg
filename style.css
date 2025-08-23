@@ -765,6 +765,12 @@ h1 {
     display: flex;
     align-items: flex-end;
     box-sizing: border-box;
+    opacity: 0.3;
+    transition: opacity 0.3s ease;
+}
+
+.calendar-day:hover .hourly-activity-histogram {
+    opacity: 1;
 }
 
 .histogram-bar {
@@ -783,20 +789,30 @@ h1 {
     z-index: 2; /* Ensure it's above histogram bars */
     white-space: nowrap;
     pointer-events: none; /* Allow clicks to pass through to elements below */
-}
+    opacity: 1;
+    transition: opacity 0.3s ease;
+    transition: bottom 0.3s ease;
+    }
+
+.calendar-day:hover .activity-start-time,
+.calendar-day:hover .activity-end-time,
+.calendar-day:hover .activity-total-duration {
+    opacity: 0.75;
+    bottom: 15px;
+    }
 
 .activity-start-time {
-    top: 0px; /* Position at the top of the histogram container */
+    bottom: 0px;
     left: 1px;
 }
 
 .activity-end-time {
-    top: 0px; /* Position at the top of the histogram container */
+    bottom: 0px;
     right: 1px;
 }
 
 .activity-total-duration {
-    bottom: 0px; /* Position at the bottom of the histogram container */
+    bottom: 0px;
     left: 50%;
-    transform: translateX(-50%); /* Center horizontally */
+    transform: translateX(-50%);
 }
