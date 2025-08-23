@@ -113,6 +113,10 @@ h1 {
     color: #333;
 }
 
+.button-group .stop:disabled {
+    cursor: not-allowed;
+}
+
 .button-group .stop:hover {
     background-color: #e0a800;
 }

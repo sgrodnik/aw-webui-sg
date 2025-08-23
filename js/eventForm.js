@@ -28,12 +28,13 @@ export function renderEventEditPanel(eventData, container, isSplitMode = false) 
 
     const startTime = eventData.timestamp;
     let endTime = new Date(startTime.getTime() + eventData.duration * 1000);
+    if (eventData.data.running === true) endTime = new Date();
 
     tbody.append("tr").html(`<td>Start Time:</td><td><input type="text" id="edit-start-time-input" class="time-input" value="${toLocalISO(startTime)}"></td>`);
     tbody.append("tr").html(`<td>End Time:</td><td><input type="text" id="edit-end-time-input" class="time-input" value="${toLocalISO(endTime)}"></td>`);
 
     if (isSplitMode) {
-        const splitTime = new Date(startTime.getTime() + eventData.duration * 1000);
+        const splitTime = new Date(startTime.getTime() + eventData.duration * 1000 - 2 * 1000);
         splitTime.setSeconds(0);
 
         tbody.select("#edit-end-time-input").property("value", toLocalISO(splitTime));
@@ -43,7 +44,7 @@ export function renderEventEditPanel(eventData, container, isSplitMode = false) 
         tbody.append("tr").attr("class", "split-mode-field").html(
             `<td>Start Time 2:</td><td><input type="text" id="edit-start-time-2-input" class="time-input" value="${toLocalISO(splitTime)}"></td>`);
         tbody.append("tr").attr("class", "split-mode-field").html(
-            `<td>End Time 2:</td><td><input type="text" id="edit-end-time-2-input" class="time-input" value="${toLocalISO(new Date(eventData.timestamp.getTime() + eventData.duration * 1000))}"></td>`);
+            `<td>End Time 2:</td><td><input type="text" id="edit-end-time-2-input" class="time-input" value="${toLocalISO(endTime)}"></td>`);
     }
 
     if (eventData.data) {
@@ -76,8 +77,10 @@ export function renderEventEditPanel(eventData, container, isSplitMode = false) 
 
     if (isSplitMode) {
         saveButton.property("disabled", false);
+        stopButton.property("disabled", true);
     } else {
         saveButton.property("disabled", true);
+        stopButton.property("disabled", false);
 
         const getFormValues = () => {
             const values = {
