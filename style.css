@@ -657,7 +657,7 @@ h1 {
     border: 1px solid black;
     padding: 1px; /* Reduced padding for the day cell */
     text-align: center;
-    min-height: 120px; /* Adjust as needed */
+    min-height: 100px; /* Adjust as needed */
     display: flex;
     flex-direction: column;
     align-items: center;
