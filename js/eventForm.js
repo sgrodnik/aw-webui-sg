@@ -33,14 +33,17 @@ export function renderEventEditPanel(eventData, container, isSplitMode = false) 
     tbody.append("tr").html(`<td>End Time:</td><td><input type="text" id="edit-end-time-input" class="time-input" value="${toLocalISO(endTime)}"></td>`);
 
     if (isSplitMode) {
-        const splitTime = new Date(startTime.getTime() + eventData.duration * 500);
-        endTime = splitTime;
+        const splitTime = new Date(startTime.getTime() + eventData.duration * 1000);
+        splitTime.setSeconds(0);
 
-        tbody.select("#edit-end-time-input").property("value", toLocalISO(endTime));
+        tbody.select("#edit-end-time-input").property("value", toLocalISO(splitTime));
 
-        tbody.append("tr").attr("class", "split-mode-field").html(`<td>Title 2:</td><td><input type="text" id="edit-title-2-input" value="${eventData.data.label || ''}"></td>`);
-        tbody.append("tr").attr("class", "split-mode-field").html(`<td>Start Time 2:</td><td><input type="text" id="edit-start-time-2-input" class="time-input" value="${toLocalISO(splitTime)}"></td>`);
-        tbody.append("tr").attr("class", "split-mode-field").html(`<td>End Time 2:</td><td><input type="text" id="edit-end-time-2-input" class="time-input" value="${toLocalISO(new Date(eventData.timestamp.getTime() + eventData.duration * 1000))}"></td>`);
+        tbody.append("tr").attr("class", "split-mode-field").html(
+            `<td>Title 2:</td><td><input type="text" id="edit-title-2-input" value="${eventData.data.label || ''}"></td>`);
+        tbody.append("tr").attr("class", "split-mode-field").html(
+            `<td>Start Time 2:</td><td><input type="text" id="edit-start-time-2-input" class="time-input" value="${toLocalISO(splitTime)}"></td>`);
+        tbody.append("tr").attr("class", "split-mode-field").html(
+            `<td>End Time 2:</td><td><input type="text" id="edit-end-time-2-input" class="time-input" value="${toLocalISO(new Date(eventData.timestamp.getTime() + eventData.duration * 1000))}"></td>`);
     }
 
     if (eventData.data) {
