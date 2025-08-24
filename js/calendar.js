@@ -1,7 +1,7 @@
 import { fetchEventsForBucket } from './api.js';
 import { calculateActivitySegments } from './events.js';
 import { getAfkBucketId, getColorRules } from './state.js';
-import { setupPanelDragging, loadPanelPosition, setupEscapeListener } from './panelManager.js';
+import { setupPanelDragging, loadPanelPosition, setupEscapeListener, setupCalendarResize } from './panelManager.js';
 import { getCurrentMonth, setCurrentMonth, getCurrentYear, setCurrentYear, getActivitySlotMap, setActivitySlotMap, clearActivitySlotMap } from './calendarState.js';
 import { renderActivitiesForDay } from './calendarRenderer.js';
 import { getFormattedDate } from './utils.js';
@@ -11,15 +11,19 @@ const CURRENT_MONTH_YEAR_SELECTOR = "#current-month-year";
 const PREV_MONTH_BUTTON_SELECTOR = "#prev-month-button";
 const NEXT_MONTH_BUTTON_SELECTOR = "#next-month-button";
 const CALENDAR_GRID_SELECTOR = "#calendar-grid";
-const CALENDAR_WEEKDAYS_SELECTOR = "#calendar-weekdays"; // New selector
+const CALENDAR_WEEKDAYS_SELECTOR = "#calendar-weekdays";
+const CALENDAR_RESIZE_HANDLE_SELECTOR = ".calendar-resize-handle";
 
 /**
  * Initializes the calendar by setting up event listeners and rendering the current month.
  */
 export function initCalendar() {
     const calendarPanel = window.d3.select(CALENDAR_PANEL_SELECTOR);
+    const calendarResizeHandle = window.d3.select(CALENDAR_RESIZE_HANDLE_SELECTOR);
+
     loadPanelPosition(calendarPanel, 'calendarPanelPosition');
     setupPanelDragging(calendarPanel);
+    setupCalendarResize(calendarPanel, calendarResizeHandle); // Setup resize functionality
 
     const today = new Date();
     setCurrentMonth(today.getMonth());
@@ -69,8 +73,8 @@ export function initCalendar() {
         renderCalendar();
     });
 
-    // Add calendar panel to escape listener
-    setupEscapeListener(window.d3.select("#event-info-panel"), window.d3.select("#event-edit-panel"), window.d3.select("#zoom-panel"), window.d3.select("#report-panel"), window.d3.select("#color-rules-panel"), calendarPanel);
+    setupEscapeListener(window.d3.select("#event-info-panel"), window.d3.select("#event-edit-panel"), window.d3.select("#zoom-panel"), window.d3.select("#report-panel"), window.d3.select("#color-rules-panel"), calendarPanel, calendarResizeHandle);
+
 }
 
 /**

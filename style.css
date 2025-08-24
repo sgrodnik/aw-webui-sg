@@ -591,10 +591,9 @@ h1 {
 /* Calendar styles */
 #calendar-panel {
     top: 100px;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 80%;
-    max-width: 900px;
+    left: 100px;
+    width: 900px;
+    min-width: 600px;
     max-height: 80vh;
     overflow-y: auto;
     background-color: #ffffff;
@@ -604,6 +603,7 @@ h1 {
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
     z-index: 1000;
     cursor: grab;
+    position: absolute;
 }
 
 .calendar-header {
@@ -647,7 +647,7 @@ h1 {
 
 .calendar-grid {
     display: grid;
-    grid-template-columns: 50px repeat(7, 110px); /* Week number column + 7 days with fixed width */
+    grid-template-columns: 50px repeat(7, 1fr); /* Week number column + 7 days with flexible width */
     gap: 1px;
     padding-top: 5px; /* Added padding-top to compensate for removed margin-bottom */
 }
@@ -665,7 +665,7 @@ h1 {
     font-size: 14px;
     color: #333;
     position: relative;
-    overflow: visible; /* Allow content to overflow */
+    overflow: hidden; /* Prevent content from overflowing */
 }
 
 .calendar-day.empty {
@@ -712,7 +712,7 @@ h1 {
     display: flex;
     align-items: center;
     justify-content: center;
-    overflow: visible; /* Allow content to overflow */
+    overflow: hidden; /* Prevent content from overflowing */
     white-space: nowrap;
     text-overflow: ellipsis;
     padding: 0 2px; /* Reduced padding */
@@ -735,11 +735,11 @@ h1 {
     left: 0;
     top: 50%;
     transform: translateY(-50%);
-    width: auto; /* Allow text to take natural width */
-    max-width: none; /* Remove max-width constraint */
-    overflow: visible; /* Allow text to overflow */
+    width: 100%; /* Take full width of parent */
+    max-width: 100%; /* Ensure it doesn't exceed parent width */
+    overflow: hidden; /* Hide overflowing text */
     white-space: nowrap; /* Ensure text stays on one line */
-    text-overflow: clip; /* Prevent ellipsis */
+    text-overflow: ellipsis; /* Show ellipsis for overflowing text */
     text-align: left; /* Align text to the left */
     padding-left: 2px; /* Match activity-rectangle padding */
     background-color: inherit; /* Inherit background to cover border */
@@ -809,4 +809,14 @@ h1 {
 .activity-total-duration {
     left: 50%;
     transform: translateX(-50%);
+}
+
+.calendar-resize-handle {
+    position: absolute;
+    right: 0;
+    top: 0;
+    width: 10px;
+    height: 100%;
+    cursor: ew-resize;
+    z-index: 1001;
 }

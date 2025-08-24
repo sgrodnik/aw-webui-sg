@@ -20,7 +20,7 @@ function setupPanelDrag(panel) {
 
     panel.on("mousedown", (event) => {
         const targetTagName = event.target.tagName;
-        if (targetTagName === 'INPUT' || targetTagName === 'BUTTON' || targetTagName === 'LABEL' || targetTagName === 'TEXTAREA') {
+        if (targetTagName === 'INPUT' || targetTagName === 'BUTTON' || targetTagName === 'LABEL' || targetTagName === 'TEXTAREA' || window.d3.select(event.target).classed('calendar-resize-handle')) {
             return;
         }
 
@@ -69,6 +69,38 @@ function setupPanelDrag(panel) {
     });
 }
 
+function setupPanelResize(panel, resizeHandle, storageKey) {
+    let isResizing = false;
+    let initialMouseX;
+    let initialPanelWidth;
+
+    resizeHandle.on("mousedown", (event) => {
+        isResizing = true;
+        initialMouseX = event.clientX;
+        initialPanelWidth = panel.node().offsetWidth;
+        panel.style("cursor", DRAG_CURSOR_GRABBING);
+        event.preventDefault();
+    });
+
+    document.addEventListener("mousemove", (event) => {
+        if (!isResizing) return;
+
+        const deltaX = event.clientX - initialMouseX;
+        const newWidth = initialPanelWidth + deltaX;
+
+        const minWidth = parseFloat(panel.style("min-width")) || 0;
+        panel.style("width", Math.max(newWidth, minWidth) + "px");
+    });
+
+    document.addEventListener("mouseup", () => {
+        if (isResizing) {
+            isResizing = false;
+            panel.style("cursor", DRAG_CURSOR_GRAB);
+            savePanelWidth(panel, storageKey);
+        }
+    });
+}
+
 /**
  * Устанавливает функциональность перетаскивания для нескольких панелей и сохраняет их позиции.
  * @param {...d3.Selection} panels - D3-выборки панелей, которые нужно сделать перетаскиваемыми.
@@ -91,8 +123,22 @@ export function loadPanelPosition(panel, storageKey) {
     const savedPosition = localStorage.getItem(storageKey);
     if (savedPosition) {
         const { top, left } = JSON.parse(savedPosition);
-        panel.style("top", top).style("left", left);
+        panel.style("top", top);
+        if (panel.attr('id') !== 'calendar-panel') {
+            panel.style("left", left);
+        }
     }
+}
+
+export function loadPanelWidth(panel, storageKey) {
+    const savedWidth = localStorage.getItem(storageKey);
+    if (savedWidth) {
+        panel.style("width", savedWidth);
+    }
+}
+
+export function savePanelWidth(panel, storageKey) {
+    localStorage.setItem(storageKey, panel.style("width"));
 }
 
 /**
@@ -102,7 +148,11 @@ export function loadPanelPosition(panel, storageKey) {
  */
 export function savePanelPosition(panel, storageKey) {
     const computedStyle = window.getComputedStyle(panel.node());
-    localStorage.setItem(storageKey, JSON.stringify({ top: computedStyle.top, left: computedStyle.left }));
+    if (panel.attr('id') === 'calendar-panel') {
+        localStorage.setItem(storageKey, JSON.stringify({ top: computedStyle.top, left: 'auto' }));
+    } else {
+        localStorage.setItem(storageKey, JSON.stringify({ top: computedStyle.top, left: computedStyle.left }));
+    }
 }
 
 /**
@@ -152,7 +202,7 @@ export function renderColorRulesPanel(colorRules, panelContainer, textarea) {
  * @param {d3.Selection} colorRulesPanel - D3-выборка панели правил раскраски.
  * @param {d3.Selection} calendarPanel - D3-выборка панели календаря.
  */
-export function setupEscapeListener(infoPanel, editPanel, zoomPanel, reportPanel, colorRulesPanel, calendarPanel) {
+export function setupEscapeListener(infoPanel, editPanel, zoomPanel, reportPanel, colorRulesPanel, calendarPanel, calendarResizeHandle) {
     document.addEventListener('keydown', (event) => {
         if (event.key === 'Escape') {
             if (editPanel.style('display') === 'block') {
@@ -171,6 +221,12 @@ export function setupEscapeListener(infoPanel, editPanel, zoomPanel, reportPanel
             }
         }
     });
+}
+
+export function setupCalendarResize(calendarPanel, calendarResizeHandle) {
+    const storageKey = `${calendarPanel.attr('id')}Width`;
+    loadPanelWidth(calendarPanel, storageKey);
+    setupPanelResize(calendarPanel, calendarResizeHandle, storageKey);
 }
 
 /**
