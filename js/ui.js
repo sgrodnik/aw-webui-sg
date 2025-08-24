@@ -98,7 +98,7 @@ export function renderLatestEventsTable(events, container, zoomToEventCallback, 
                 .filter(segment => segment.status === 'not-afk')
                 .reduce((sum, segment) => sum + segment.duration, 0);
         }
-        const eventDurationF = formatDuration(event.duration);
+        const eventDurationF = formatDuration(event.duration, false);
         const nonAfkDurationF = formatDuration(nonAfkDuration, false);
         row.append("td").html(`${nonAfkDurationF} <span class="ligth-font">(${eventDurationF})</span>`);
 

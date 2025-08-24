@@ -155,11 +155,15 @@ export function formatDuration(seconds, includeSeconds = true) {
     if (h > 0) {
         const paddedM = String(m).padStart(2, '0');
         const paddedS = String(s).padStart(2, '0');
-        return includeSeconds ? `${h}h ${paddedM}m ${paddedS}s` : `${h}h ${paddedM}m`;
+        return includeSeconds
+            ? `${h}h ${paddedM}m ${paddedS}s`
+            : `${h}h ${paddedM}m`;
     }
     if (m > 0) {
         const paddedS = String(s).padStart(2, '0');
-        return includeSeconds ? `${m}m ${paddedS}s` : `${m}m`;
+        return includeSeconds
+            ? `${m}m ${paddedS}s`
+            : `${m}m`;
     }
     if (includeSeconds) {
         const paddedS = String(s).padStart(2, '0');
