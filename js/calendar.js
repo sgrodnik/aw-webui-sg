@@ -74,7 +74,109 @@ export function initCalendar() {
     });
 
     setupEscapeListener(window.d3.select("#event-info-panel"), window.d3.select("#event-edit-panel"), window.d3.select("#zoom-panel"), window.d3.select("#report-panel"), window.d3.select("#color-rules-panel"), calendarPanel, calendarResizeHandle);
+}
 
+/**
+ * Calculates weekly statistics for a given week.
+ * @param {Array<Object>} stopwatchEvents - Array of stopwatch events.
+ * @param {Array<Object>} afkEvents - Array of AFK events.
+ * @param {number} weekNumber - The week number.
+ * @param {number} year - The year.
+ * @returns {Object} Weekly statistics object.
+ */
+function calculateWeeklyStats(stopwatchEvents, afkEvents, weekNumber, year) {
+    // Calculate week start and end dates (Monday to Sunday)
+    const weekStart = new Date(year, 0, 1 + (weekNumber - 1) * 7);
+    const dayOfWeek = weekStart.getDay();
+    const diff = weekStart.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1); // Adjust to Monday
+    weekStart.setDate(diff);
+    weekStart.setHours(0, 0, 0, 0);
+
+    const weekEnd = new Date(weekStart);
+    weekEnd.setDate(weekStart.getDate() + 6);
+    weekEnd.setHours(23, 59, 59, 999);
+
+    let totalTaskTime = 0; // Stopwatch time during 'not-afk'
+    let totalNotAfkTime = 0; // Total 'not-afk' time from AFK events
+    const uniqueTasks = new Set();
+    const dailyStats = {}; // Track daily task and not-afk time
+
+    // Initialize daily stats for the week
+    for (let i = 0; i < 7; i++) {
+        const date = new Date(weekStart);
+        date.setDate(weekStart.getDate() + i);
+        const dateKey = getFormattedDate(date);
+        dailyStats[dateKey] = { taskTime: 0, notAfkTime: 0 };
+    }
+
+    // Process stopwatch events
+    stopwatchEvents.forEach(event => {
+        const eventStart = new Date(event.timestamp);
+        if (eventStart >= weekStart && eventStart <= weekEnd) {
+            // Add to unique tasks
+            if (event.data.label) {
+                uniqueTasks.add(event.data.label);
+            }
+
+            // Calculate task time from activity segments
+            if (event.activitySegments) {
+                event.activitySegments.forEach(segment => {
+                    if (segment.status === 'not-afk') {
+                        totalTaskTime += segment.duration;
+                        const segmentDate = new Date(segment.startTimestamp);
+                        const dateKey = getFormattedDate(segmentDate);
+                        if (dailyStats[dateKey]) {
+                            dailyStats[dateKey].taskTime += segment.duration;
+                        }
+                    }
+                });
+            }
+        }
+    });
+
+    // Process AFK events to calculate total not-afk time
+    afkEvents.forEach(event => {
+        const eventStart = new Date(event.timestamp);
+        const eventEnd = new Date((event.timestamp instanceof Date ? event.timestamp.getTime() : new Date(event.timestamp).getTime()) + event.duration * 1000);
+
+        if (eventStart <= weekEnd && eventEnd >= weekStart && event.data.status === 'not-afk') {
+            const overlapStart = eventStart < weekStart ? weekStart : eventStart;
+            const overlapEnd = eventEnd > weekEnd ? weekEnd : eventEnd;
+            const overlapDuration = (overlapEnd - overlapStart) / 1000;
+
+            totalNotAfkTime += overlapDuration;
+
+            // Add to daily stats
+            const dateKey = getFormattedDate(overlapStart);
+            if (dailyStats[dateKey]) {
+                dailyStats[dateKey].notAfkTime += overlapDuration;
+            }
+        }
+    });
+
+    // Calculate task-free time
+    const totalTaskFreeTime = Math.max(0, totalNotAfkTime - totalTaskTime);
+
+    // Find longest task day and longest not-afk day separately
+    let longestTaskDay = { date: null, taskTime: 0 };
+    let longestNotAfkDay = { date: null, notAfkTime: 0 };
+
+    Object.entries(dailyStats).forEach(([dateKey, stats]) => {
+        if (stats.taskTime > longestTaskDay.taskTime) {
+            longestTaskDay = { date: dateKey, taskTime: stats.taskTime };
+        }
+        if (stats.notAfkTime > longestNotAfkDay.notAfkTime) {
+            longestNotAfkDay = { date: dateKey, notAfkTime: stats.notAfkTime };
+        }
+    });
+
+    return {
+        totalTaskTime,
+        totalTaskFreeTime,
+        longestTaskDay,
+        longestNotAfkDay,
+        taskCount: uniqueTasks.size
+    };
 }
 
 /**
@@ -162,6 +264,42 @@ export async function renderCalendar() {
         return Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
     };
 
+    // Calculate weekly statistics for each week in the displayed period
+    const weeklyStatsMap = new Map();
+    const eventsByWeek = new Map();
+
+    // Group events by week for statistics calculation
+    processedEvents.forEach(event => {
+        if (event.activitySegments) {
+            event.activitySegments.forEach(segment => {
+                const segmentDate = new Date(segment.startTimestamp);
+                const weekNum = getWeekNumber(segmentDate);
+                const year = segmentDate.getFullYear();
+
+                if (!eventsByWeek.has(`${year}-${weekNum}`)) {
+                    eventsByWeek.set(`${year}-${weekNum}`, {
+                        stopwatchEvents: [],
+                        afkEvents: [],
+                        weekNumber: weekNum,
+                        year: year
+                    });
+                }
+
+                const weekData = eventsByWeek.get(`${year}-${weekNum}`);
+                const eventId = event.id || `${event.timestamp}-${event.data?.label || 'unknown'}`;
+                if (!weekData.stopwatchEvents.some(e => (e.id || `${e.timestamp}-${e.data?.label || 'unknown'}`) === eventId)) {
+                    weekData.stopwatchEvents.push(event);
+                }
+            });
+        }
+    });
+
+    // Calculate stats for each week
+    eventsByWeek.forEach(weekData => {
+        const stats = calculateWeeklyStats(weekData.stopwatchEvents, afkEvents, weekData.weekNumber, weekData.year);
+        weeklyStatsMap.set(`${weekData.year}-${weekData.weekNumber}`, stats);
+    });
+
     let currentDay = new Date(currentYear, currentMonth, 1 - startDay); // Start from the first day to render (could be previous month)
     let previousDaySlots = new Map(); // Map to store activity label to its assigned slot index for the previous day
 
@@ -171,9 +309,30 @@ export async function renderCalendar() {
 
         // Add week number at the start of each week (Monday)
         if (dayOfWeek === 1) {
-            calendarGrid.append("div")
-                .attr("class", "calendar-week-number")
-                .text(getWeekNumber(currentDay));
+            const weekNum = getWeekNumber(currentDay);
+            const weekStats = weeklyStatsMap.get(`${currentYear}-${weekNum}`);
+
+            const weekNumberCell = calendarGrid.append("div")
+                .attr("class", "calendar-week-number");
+
+            if (weekStats) {
+                const taskHours = (weekStats.totalTaskTime / 3600).toFixed(1);
+                const taskFreeHours = (weekStats.totalTaskFreeTime / 3600).toFixed(1);
+                const longestTaskHours = (weekStats.longestTaskDay.taskTime / 3600).toFixed(1);
+                const longestNotAfkHours = (weekStats.longestNotAfkDay.notAfkTime / 3600).toFixed(1);
+
+                weekNumberCell.html(`
+                    <div class="week-number">${weekNum}</div>
+                    <div class="week-total" title="Total ${taskHours}h +\ntask-free ${taskFreeHours}h">
+                                                  ${taskHours}h +<br>${taskFreeHours}h</div>
+                    <div class="week-longest" title="Longest day ${longestTaskHours}h /\nLongest day (task-free) ${longestNotAfkHours}h">
+                                                    ${longestTaskHours}h /<br>${longestNotAfkHours}h</div>
+                    <div class="week-tasks" title="Unique task count ${weekStats.taskCount}">
+                                                   ${weekStats.taskCount}</div>
+                `);
+            } else {
+                weekNumberCell.html(`<div class="week-number">${weekNum}</div>`);
+            }
         }
 
         const day = calendarGrid.append("div")
