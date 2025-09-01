@@ -59,6 +59,16 @@ export function renderEventTable(eventData, container) {
  * @param {d3.Selection} newEventLabelInput - The D3 selection for the new event label input field.
  */
 export function renderLatestEventsTable(events, container, zoomToEventCallback, newEventLabelInput) {
+    // Проверки на undefined параметры
+    if (!container || container.empty()) {
+        console.warn("renderLatestEventsTable: container is undefined or empty");
+        return;
+    }
+    if (!events || !Array.isArray(events)) {
+        console.warn("renderLatestEventsTable: events is undefined or not an array");
+        return;
+    }
+
     container.select("tbody").html("");
 
     const stopwatchEvents = events.filter(event => event.bucket.startsWith('aw-stopwatch'));
@@ -81,9 +91,19 @@ export function renderLatestEventsTable(events, container, zoomToEventCallback, 
                 if (zoomToEventCallback) {
                     zoomToEventCallback(event);
                 }
-                if (newEventLabelInput && event.data.label) {
-                    newEventLabelInput.property("value", event.data.label);
-                    newEventLabelInput.node().focus();
+                if (event.data.label) {
+                    // Проверяем, доступен ли newEventLabelInput
+                    if (newEventLabelInput && typeof newEventLabelInput.empty === 'function' && !newEventLabelInput.empty()) {
+                        newEventLabelInput.property("value", event.data.label);
+                        newEventLabelInput.node().focus();
+                    } else {
+                        // Если newEventLabelInput недоступен, попробуем найти элемент заново
+                        const fallbackInput = window.d3.select("#new-event-label-input");
+                        if (fallbackInput && typeof fallbackInput.empty === 'function' && !fallbackInput.empty()) {
+                            fallbackInput.property("value", event.data.label);
+                            fallbackInput.node().focus();
+                        }
+                    }
                 }
             });
 

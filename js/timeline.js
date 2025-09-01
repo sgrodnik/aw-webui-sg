@@ -148,7 +148,12 @@ export async function redrawTimeline(allEvents, visibleBuckets, infoPanel, editP
 
     setupZoom();
 
-    renderLatestEventsTable(filteredEvents, window.d3.select("#latest-events-table"), zoomToEventCallback, newEventLabelInput);
+    const latestEventsTable = window.d3.select("#latest-events-table");
+    if (!latestEventsTable.empty()) {
+        renderLatestEventsTable(filteredEvents, latestEventsTable, zoomToEventCallback, newEventLabelInput);
+    } else {
+        console.warn("redrawTimeline: latest-events-table not found");
+    }
 
     const currentTransform = window.d3.zoomTransform(svg.node());
     if (currentTransform && currentTransform.k !== 1) {
