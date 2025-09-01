@@ -699,6 +699,44 @@ h1 {
     color: #333;
 }
 
+.calendar-week-number {
+    flex-direction: column;
+    align-items: stretch;
+    justify-content: flex-start;
+    padding: 8px 4px;
+    font-size: 10px;
+    line-height: 1.2;
+}
+
+.calendar-week-number .week-number {
+    font-size: 14px;
+    font-weight: bold;
+    margin-bottom: 4px;
+    color: #0056b3;
+}
+
+.calendar-week-number .week-total,
+.calendar-week-number .week-longest,
+.calendar-week-number .week-tasks {
+    font-size: 11px;
+    margin-bottom: 2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.calendar-week-number .week-total {
+    color: #28a745;
+}
+
+.calendar-week-number .week-longest {
+    color: #ffc107;
+}
+
+.calendar-week-number .week-tasks {
+    color: #6c757d;
+}
+
 .activity-rectangle,
 .activity-placeholder {
     width: calc(100% - 0px); /* Full width of the day cell minus padding (2px left + 2px right) */
