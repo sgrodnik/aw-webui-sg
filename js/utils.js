@@ -169,7 +169,7 @@ export function formatDuration(seconds, includeSeconds = true) {
         const paddedS = String(s).padStart(2, '0');
         return `${paddedS}s`;
     }
-    return "";
+    return "0m";
 }
 
 /**
@@ -214,6 +214,45 @@ export function isColorDark(hexColor) {
     });
     const L = (0.2126 * c[0]) + (0.7152 * c[1]) + (0.0722 * c[2]);
     return L <= 0.179;
+}
+
+/**
+ * Normalizes window titles by removing common insignificant prefixes and suffixes repeatedly until no more changes.
+ * @param {string} title - The original window title.
+ * @returns {string} The normalized title with prefixes and suffixes removed.
+ */
+export function normalizeTitle(title) {
+    if (!title) return title;
+
+    // Remove common prefixes that indicate file state
+    const prefixesToRemove = ['● '];
+    // Remove common suffixes
+    const suffixesToRemove = [' - Visual Studio Code'];
+
+    let normalizedTitle = title;
+    let changed = true;
+
+    while (changed) {
+        changed = false;
+
+        // Remove prefixes
+        for (const prefix of prefixesToRemove) {
+            if (normalizedTitle.startsWith(prefix)) {
+                normalizedTitle = normalizedTitle.substring(prefix.length);
+                changed = true;
+            }
+        }
+
+        // Remove suffixes
+        for (const suffix of suffixesToRemove) {
+            if (normalizedTitle.endsWith(suffix)) {
+                normalizedTitle = normalizedTitle.substring(0, normalizedTitle.length - suffix.length);
+                changed = true;
+            }
+        }
+    }
+
+    return normalizedTitle;
 }
 
 /**

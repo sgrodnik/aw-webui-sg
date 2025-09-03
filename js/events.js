@@ -1,4 +1,5 @@
 import { getAfkBucketId } from './state.js';
+import { normalizeTitle } from './utils.js';
 
 /**
  * Processes stopwatch and AFK events to generate activity segments.
@@ -92,4 +93,78 @@ export function calculateActivitySegments(stopwatchEvents, afkEvents) {
         swEvent.activitySegments = mergedSegments;
         return swEvent;
     });
+}
+
+/**
+ * Groups window watcher events into continuous app sequences.
+ * Events are grouped by app, considering them continuous if the app doesn't change,
+ * regardless of time gaps. Overlapping events are handled by taking the longest one
+ * and logging a warning.
+ * @param {Array<Object>} events - An array of all events.
+ * @returns {Array<Object>} An array of grouped window watcher events.
+ */
+export function groupWindowWatcherEvents(events) {
+    const windowEvents = events.filter(e => e.bucket.startsWith('aw-watcher-window')).sort((a, b) => a.timestamp - b.timestamp);
+    const groups = [];
+
+    if (windowEvents.length === 0) return groups;
+
+    let currentGroup = {
+        app: windowEvents[0].data.app,
+        startTime: windowEvents[0].timestamp,
+        totalDuration: windowEvents[0].duration,
+        titleDurations: new Map([[normalizeTitle(windowEvents[0].data.title), windowEvents[0].duration]]),
+        events: [windowEvents[0]],
+        endTime: new Date(windowEvents[0].timestamp.getTime() + windowEvents[0].duration * 1000)
+    };
+
+    for (const event of windowEvents) {
+
+        const eventStart = event.timestamp;
+        const eventEnd = new Date(event.timestamp.getTime() + event.duration * 1000);
+
+        if (event.data.app === currentGroup.app) {
+            // Check for overlap with last event in group
+            const lastEvent = currentGroup.events[currentGroup.events.length - 1];
+            if (lastEvent) {
+                const lastEnd = new Date(lastEvent.timestamp.getTime() + lastEvent.duration * 1000);
+                if (eventStart < lastEnd) {
+                    console.warn(`Overlapping window events for app ${event.data.app}: ${lastEvent.timestamp} - ${lastEnd} overlaps with ${eventStart} - ${eventEnd}`);
+                    // Take the longer duration
+                    if (event.duration > lastEvent.duration) {
+                        // Replace last event
+                        currentGroup.totalDuration -= lastEvent.duration;
+                        currentGroup.totalDuration += event.duration;
+                        currentGroup.events[currentGroup.events.length - 1] = event;
+                        currentGroup.endTime = eventEnd;
+                    }
+                    continue;
+                }
+            }
+
+            // Add to current group
+            currentGroup.events.push(event);
+            currentGroup.totalDuration += event.duration;
+            currentGroup.endTime = eventEnd;
+
+            // Update title durations
+            const title = normalizeTitle(event.data.title);
+            currentGroup.titleDurations.set(title, (currentGroup.titleDurations.get(title) || 0) + event.duration);
+        } else {
+            // Start new group
+            groups.push(currentGroup);
+            currentGroup = {
+                app: event.data.app,
+                startTime: event.timestamp,
+                totalDuration: event.duration,
+                titleDurations: new Map([[normalizeTitle(event.data.title), event.duration]]),
+                events: [event],
+                endTime: eventEnd
+            };
+        }
+    }
+
+    groups.push(currentGroup); // Push the last group
+
+    return groups.filter(group => group.events.length > 1);
 }

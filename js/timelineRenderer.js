@@ -1,5 +1,7 @@
 import { formatAbsoluteTime, formatRelativeTime, generateRelativeTimeTicks, toLocalISO, formatDuration, isColorDark } from './utils.js';
 import { getColorForEvent } from './colorRules.js';
+import { createWindowGroupTooltip } from './timelineInteraction.js';
+
 import { svg, g, xScale, yScale, width, height } from './timeline.js'; // Импорт общих переменных из timeline.js
 
 const BAR_HEIGHT = 30;
@@ -20,6 +22,9 @@ function getEventLabel(d) {
         }
         return [label, ''];
     }
+    if (d.bucket === 'aw-watcher-window-group') {
+        return [d.data.app + ' (' + formatDuration(d.duration) + ')', ''];
+    }
     if (d.bucket.startsWith('aw-watcher-window')) {
         return [d.data.app, d.data.title];
     }
@@ -39,6 +44,7 @@ function getEventLabel(d) {
  * @returns {d3.Selection} The D3 selection for the rendered event segments.
  */
 export function renderEventPoints(events, infoPanel, editPanel, dataPre, renderEventTableCallback, renderEventEditPanelCallback, panAndZoomToEventCallback, getColorRulesCallback) {
+
     const segments = g.selectAll(`.${EVENT_SEGMENT_CLASS}`)
         .data(events)
         .enter().append("g")
@@ -47,6 +53,9 @@ export function renderEventPoints(events, infoPanel, editPanel, dataPre, renderE
             let classes = `${EVENT_SEGMENT_CLASS}`;
             if (d.bucket.startsWith('aw-watcher-afk_')) {
                 classes += ' afk-bucket-event';
+            }
+            if (d.bucket === 'aw-watcher-window-group') {
+                classes += ' window-group-event';
             }
             if (d.data.running === true) {
                 classes += ' running-event';
@@ -126,7 +135,7 @@ export function renderEventPoints(events, infoPanel, editPanel, dataPre, renderE
                 }
             }
 
-            group.append("rect")
+            const rect = group.append("rect")
                 .attr("class", rectClass)
                 .attr("x", 0)
                 .attr("y", 0)
@@ -137,6 +146,10 @@ export function renderEventPoints(events, infoPanel, editPanel, dataPre, renderE
                 })
                 .attr("height", BAR_HEIGHT)
                 .style("fill", fillColor ? fillColor : null); // Apply custom color
+
+            if (d.bucket === 'aw-watcher-window-group') {
+                rect.attr("title", createWindowGroupTooltip(d));
+            }
         }
 
         // Add text label

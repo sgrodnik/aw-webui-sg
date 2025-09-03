@@ -5,7 +5,7 @@ import { renderEventPoints } from './timelineRenderer.js';
 import { panAndZoomToEvent, zoomToRange } from './timelineInteraction.js';
 import { renderEventTable, renderLatestEventsTable, setupZoomControls } from './ui.js';
 import { setupTimelineHoverInteraction } from './timelineInteraction.js';
-import { calculateActivitySegments } from './events.js';
+import { calculateActivitySegments, groupWindowWatcherEvents } from './events.js';
 import { generateTaskReport } from './report.js';
 import { loadColorRules, saveColorRules } from './colorRules.js';
 import { initCalendar, renderCalendar } from './calendar.js';
@@ -38,11 +38,27 @@ async function loadAndProcessEvents(buckets) {
 
     const processedEvents = calculateActivitySegments(stopwatchEvents, afkEvents);
 
-    // Return all events, but with stopwatch events now containing segments
-    return allEvents.map(event => {
+    // Group window watcher events
+    const windowGroups = groupWindowWatcherEvents(allEvents);
+    const groupedEvents = windowGroups.map((group, index) => ({
+        id: `group-${index}`,
+        bucket: 'aw-watcher-window-group',
+        timestamp: group.startTime,
+        duration: group.totalDuration,
+        data: {
+            app: group.app,
+            titleDurations: group.titleDurations,
+            events: group.events
+        }
+    }));
+
+    // Return all events with processed stopwatch and added groups
+    const baseEvents = allEvents.map(event => {
         const processed = processedEvents.find(p => p.id === event.id);
         return processed ? processed : event;
     });
+
+    return baseEvents.concat(groupedEvents);
 }
 
 async function main() {

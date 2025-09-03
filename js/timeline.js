@@ -2,6 +2,7 @@ import { formatAbsoluteTime, formatRelativeTime, generateRelativeTimeTicks } fro
 import { getAllEventsData, getVisibleBuckets, getColorRules } from './state.js';
 import { renderLatestEventsTable } from './ui.js';
 import { renderEventPoints } from './timelineRenderer.js';
+import { groupWindowWatcherEvents } from './events.js';
 import { setupTimelineHoverInteraction, panAndZoomToEvent, zoomToRange, resetHoverElements } from './timelineInteraction.js';
 
 const SVG_SELECTOR = "#timeline-svg";
@@ -36,7 +37,7 @@ export function setupChart(events, chartWidth, chartHeight) {
     const uniqueBuckets = [...new Set(events.map(d => d.bucket))].sort();
     yScale = d3.scalePoint()
         .domain(uniqueBuckets)
-        .range([height - 50, 50])
+        .range([height - 22, 22])
         .padding(0.5);
 
     const xAxis = window.d3.axisBottom(xScale)
@@ -137,18 +138,36 @@ export function setupZoom() {
 export async function redrawTimeline(allEvents, visibleBuckets, infoPanel, editPanel, dataPre, renderEventTableCallback, renderEventEditPanelCallback, zoomToEventCallback, newEventLabelInput) {
     const filteredEvents = allEvents.filter(event => visibleBuckets.includes(event.bucket));
 
+    // Group window watcher events
+    const windowGroups = groupWindowWatcherEvents(filteredEvents);
+
+    const groupedEvents = windowGroups.map((group, index) => ({
+        id: `group-${index}`,
+        bucket: 'aw-watcher-window-group',
+        timestamp: group.startTime,
+        duration: group.totalDuration,
+        data: {
+            app: group.app,
+            titleDurations: group.titleDurations,
+            events: group.events
+        }
+    }));
+
+    // Add groups to filtered events (keep individual window events)
+    const finalEvents = filteredEvents.concat(groupedEvents);
+
     g.selectAll("*").remove();
 
-    setupChart(filteredEvents, width, height);
+    setupChart(finalEvents, width, height);
 
     resetHoverElements();
     setupTimelineHoverInteraction(editPanel);
 
-    renderEventPoints(filteredEvents, infoPanel, editPanel, dataPre, renderEventTableCallback, renderEventEditPanelCallback, panAndZoomToEvent, getColorRules);
+    renderEventPoints(finalEvents, infoPanel, editPanel, dataPre, renderEventTableCallback, renderEventEditPanelCallback, panAndZoomToEvent, getColorRules);
 
     setupZoom();
 
-    renderLatestEventsTable(filteredEvents, window.d3.select("#latest-events-table"), zoomToEventCallback, newEventLabelInput);
+    renderLatestEventsTable(finalEvents, window.d3.select("#latest-events-table"), zoomToEventCallback, newEventLabelInput);
 
     const currentTransform = window.d3.zoomTransform(svg.node());
     if (currentTransform && currentTransform.k !== 1) {

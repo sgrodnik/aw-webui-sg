@@ -209,6 +209,28 @@ export function panAndZoomToEvent(d) {
 }
 
 /**
+ * Creates a tooltip string for window watcher groups.
+ * @param {Object} d - The event data object.
+ * @returns {string} The tooltip string.
+ */
+export function createWindowGroupTooltip(d) {
+    if (d.bucket !== 'aw-watcher-window-group') return '';
+
+    const titleDurations = d.data.titleDurations;
+    const sortedTitles = Array.from(titleDurations.entries()).sort((a, b) => b[1] - a[1]);
+
+    const tooltipLines = sortedTitles.map(([title, duration]) => {
+        const hours = Math.floor(duration / 3600);
+        const minutes = Math.floor((duration % 3600) / 60);
+        const secs = Math.floor(duration % 60);
+        const timeStr = hours > 0 ? `${hours}h ${minutes}m ${secs}s` : minutes > 0 ? `${minutes}m ${secs}s` : `${secs}s`;
+        return `${timeStr} ${title}`;
+    });
+
+    return d.data.app + ':\n' + tooltipLines.join('\n');
+}
+
+/**
  * Zooms and pans the timeline to a specific date range.
  * @param {Date} startDate - The start date of the range.
  * @param {Date} endDate - The end date of the range.
