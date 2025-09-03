@@ -67,6 +67,9 @@ async function main() {
     zoomPanel.style("visibility", "visible");
 
     const newEventLabelInput = window.d3.select(NEW_EVENT_LABEL_INPUT_SELECTOR);
+    if (newEventLabelInput.empty()) {
+        console.warn("main: new-event-label-input not found");
+    }
 
     const container = window.d3.select(TIMELINE_CONTAINER_SELECTOR);
     const chartWidth = container.node().clientWidth;
@@ -129,7 +132,11 @@ async function main() {
     setupZoom();
 
     const latestEventsTable = window.d3.select("#latest-events-table");
-    renderLatestEventsTable(getAllEventsData(), latestEventsTable, panAndZoomToEvent, newEventLabelInput);
+    if (!latestEventsTable.empty()) {
+        renderLatestEventsTable(getAllEventsData(), latestEventsTable, panAndZoomToEvent, newEventLabelInput);
+    } else {
+        console.warn("main: latest-events-table not found");
+    }
 
     const calendarPanel = window.d3.select(CALENDAR_PANEL_SELECTOR);
 
@@ -170,8 +177,12 @@ async function main() {
             return;
         }
 
+        // Prepare data for new event
+        const now = new Date();
         const newEventData = {
-            timestamp: new Date().toISOString(),
+            id: null, // New event, no ID yet
+            bucket: "aw-stopwatch",
+            timestamp: now,
             duration: 0,
             data: {
                 running: true,
@@ -179,17 +190,15 @@ async function main() {
             }
         };
 
-        try {
-            await createEvent("aw-stopwatch", newEventData);
-            showNotification(`Event "${label}" created successfully!`);
-            labelInput.property("value", ""); // Clear input field
-            // Update data and redraw timeline
-            setAllEventsData(await loadAndProcessEvents(getVisibleBuckets()));
-            await redrawTimeline(getAllEventsData(), getVisibleBuckets(), infoPanel, editPanel, dataPre, renderEventTable, renderEventEditPanel, renderLatestEventsTable, panAndZoomToEvent, newEventLabelInput);
-        } catch (error) {
-            showNotification("Failed to create event. Check console for details.");
-            console.error("Failed to create new event:", error);
-        }
+        // Show edit panel for new event
+        const editPanel = window.d3.select(EDIT_PANEL_SELECTOR);
+        editPanel.property("originalEvent", newEventData);
+        editPanel.property("isNewEvent", true);
+        renderEventEditPanel(newEventData, window.d3.select("#edit-event-data-table"), false);
+        editPanel.style("display", "block");
+
+        // Clear input field
+        labelInput.property("value", "");
     });
 
     window.d3.select(GENERATE_REPORT_BUTTON_SELECTOR).on("click", () => {

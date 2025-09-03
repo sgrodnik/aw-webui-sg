@@ -21,17 +21,21 @@ export function renderEventEditPanel(eventData, container, isSplitMode = false) 
     const table = container.append("table").attr("class", "event-attributes-table");
     const tbody = table.append("tbody");
 
-    tbody.append("tr").html(`<td>ID:</td><td><input type="text" value="${eventData.id}" readonly></td>`);
+    const isNewEvent = container.node().parentNode.isNewEvent;
+
+    if (!isNewEvent) {
+        tbody.append("tr").html(`<td>ID:</td><td><input type="text" value="${eventData.id}" readonly></td>`);
+    }
     tbody.append("tr").html(`<td>Bucket:</td><td><input type="text" value="${eventData.bucket}" readonly></td>`);
     tbody.append("tr").html(`<td>Title:</td><td><input type="text" id="edit-title-input" value="${eventData.data.label || ''}"></td>`);
     tbody.append("tr").html(`<td>Duration:</td><td><input type="text" value="${formatDuration(eventData.duration) }" readonly></td>`);
 
     const startTime = eventData.timestamp;
     let endTime = new Date(startTime.getTime() + eventData.duration * 1000);
-    if (eventData.data.running === true) endTime = new Date();
+    if (eventData.data.running === true && !isNewEvent) endTime = new Date();
 
     tbody.append("tr").html(`<td>Start Time:</td><td><input type="text" id="edit-start-time-input" class="time-input" value="${toLocalISO(startTime)}"></td>`);
-    tbody.append("tr").html(`<td>End Time:</td><td><input type="text" id="edit-end-time-input" class="time-input" value="${toLocalISO(endTime)}"></td>`);
+    tbody.append("tr").html(`<td>End Time:</td><td><input type="text" id="edit-end-time-input" class="time-input" value="${isNewEvent ? '' : toLocalISO(endTime)}"></td>`);
 
     if (isSplitMode) {
         const splitTime = new Date(startTime.getTime() + eventData.duration * 1000 - 2 * 1000);
@@ -126,6 +130,7 @@ export function setupEditControls(editPanel, onSaveCallback, svg, zoomBehavior) 
     const resetEditPanel = () => {
         editPanel.style("display", "none");
         editPanel.property("isSplitMode", false);
+        editPanel.property("isNewEvent", false);
         splitButton.property("disabled", false);
         stopButton.style("display", "none"); // Hide the "Stop" button on reset
         editPanel.selectAll(".split-mode-field").remove();
@@ -203,6 +208,7 @@ export function setupEditControls(editPanel, onSaveCallback, svg, zoomBehavior) 
         if (!originalEvent) return alert("No event data to save.");
 
         const isSplitMode = editPanel.property("isSplitMode");
+        const isNewEvent = editPanel.property("isNewEvent");
 
         let currentTransform;
         if (svg && zoomBehavior) {
@@ -245,23 +251,31 @@ export function setupEditControls(editPanel, onSaveCallback, svg, zoomBehavior) 
             } else {
                 const newTitle = window.d3.select("#edit-title-input").property("value");
                 const newStartTime = new Date(window.d3.select("#edit-start-time-input").property("value"));
-                const newEndTime = new Date(window.d3.select("#edit-end-time-input").property("value"));
-                const newDuration = (newEndTime.getTime() - newStartTime.getTime()) / 1000;
+                const endTimeValue = window.d3.select("#edit-end-time-input").property("value").trim();
+                let newDuration = 0;
+                let running = true;
 
-                if (newDuration < 0) return showNotification('End time cannot be before start time.');
+                if (endTimeValue) {
+                    const newEndTime = new Date(endTimeValue);
+                    newDuration = (newEndTime.getTime() - newStartTime.getTime()) / 1000;
+                    if (newDuration < 0) return showNotification('End time cannot be before start time.');
+                    running = false;
+                }
 
                 const newEvent = {
                     timestamp: newStartTime.toISOString(),
                     duration: newDuration,
-                    data: { ...originalEvent.data, label: newTitle }
+                    data: { ...originalEvent.data, label: newTitle, running: running }
                 };
 
                 await createEvent(originalEvent.bucket, newEvent);
             }
 
-            await deleteEvent(originalEvent.bucket, originalEvent.id);
+            if (!isNewEvent) {
+                await deleteEvent(originalEvent.bucket, originalEvent.id);
+            }
 
-            showNotification('Event updated successfully!');
+            showNotification(isNewEvent ? 'Event created successfully!' : 'Event updated successfully!');
             resetEditPanel();
             await onSaveCallback();
 
@@ -270,8 +284,8 @@ export function setupEditControls(editPanel, onSaveCallback, svg, zoomBehavior) 
             }
 
         } catch (error) {
-            console.error('Failed to update event:', error);
-            showNotification('Failed to update event. Please check console for details.');
+            console.error('Failed to save event:', error);
+            showNotification('Failed to save event. Please check console for details.');
         }
     });
 }

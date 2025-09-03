@@ -14,19 +14,26 @@ const EVENT_LABEL_CLASS = "event-label";
  * @returns {Array<string>} An array containing two strings for the label.
  */
 function getEventLabel(d) {
+    const durationStr = formatDuration(d.duration, false);
+
     if (d.bucket.startsWith('aw-stopwatch')) {
         const label = d.data.label || '';
         const lastColonIndex = label.lastIndexOf(':');
         if (lastColonIndex > -1 && lastColonIndex < label.length - 1) {
-            return [label.substring(0, lastColonIndex).trim(), label.substring(lastColonIndex + 1).trim()];
+            const beforeColon = label.substring(0, lastColonIndex).trim();
+            const afterColon = label.substring(lastColonIndex + 1).trim();
+            return [beforeColon, `${afterColon} ${durationStr}`];
         }
-        return [label, ''];
+        return [label, durationStr];
+    }
+    if (d.bucket.startsWith('aw-watcher-afk_')) {
+        return ['', durationStr];
     }
     if (d.bucket === 'aw-watcher-window-group') {
         return [d.data.app + ' (' + formatDuration(d.duration) + ')', ''];
     }
     if (d.bucket.startsWith('aw-watcher-window')) {
-        return [d.data.app, d.data.title];
+        return [`${d.data.app} ${durationStr}`, d.data.title];
     }
     return ['', ''];
 }
