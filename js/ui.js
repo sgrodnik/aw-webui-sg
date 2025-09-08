@@ -38,13 +38,12 @@ export function renderEventTable(eventData, container) {
 
     if (eventData.bucket === 'aw-watcher-window-group') {
         // Special handling for window watcher groups
-        tbody.append("tr").html(`<td>Group ID:</td><td>${eventData.id}</td>`);
         tbody.append("tr").html(`<td>App:</td><td>${eventData.data.app}</td>`);
 
         const titleDurations = eventData.data.titleDurations;
         const sortedTitles = Array.from(titleDurations.entries()).sort((a, b) => b[1] - a[1]);
 
-        tbody.append("tr").html(`<td>Titles:</td><td>${sortedTitles.map(([title, dur]) => `${title} (${formatDuration(dur, false)})`).join('<br>')}</td>`);
+        tbody.append("tr").html(`<td>Titles:</td><td>${sortedTitles.map(([title, dur]) => `<span class="titles-item">${formatDuration(dur)} ${title}</span>`).join('')}</td>`);
     } else if (eventData.data) {
         for (const key in eventData.data) {
             if (eventData.data.hasOwnProperty(key)) {

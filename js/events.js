@@ -1,5 +1,5 @@
 import { getAfkBucketId } from './state.js';
-import { normalizeTitle } from './utils.js';
+import { normalizeTitle, formatDuration } from './utils.js';
 
 /**
  * Processes stopwatch and AFK events to generate activity segments.
@@ -104,11 +104,17 @@ export function calculateActivitySegments(stopwatchEvents, afkEvents) {
  * @returns {Array<Object>} An array of grouped window watcher events.
  */
 export function groupWindowWatcherEvents(events) {
+    // Фильтруем события только для окон и сортируем по времени
     const windowEvents = events.filter(e => e.bucket.startsWith('aw-watcher-window')).sort((a, b) => a.timestamp - b.timestamp);
     const groups = [];
 
     if (windowEvents.length === 0) return groups;
 
+    // const eventCount = group.events.length;
+    // const uniqueApps = new Set(group.events.map(e => e.data.app)).size;
+    // const id = group.isDirty ? `${index}-${eventCount}-${uniqueApps}` : `${index}-${eventCount}`;
+
+    // Инициализируем первую группу с первым событием
     let currentGroup = {
         app: windowEvents[0].data.app,
         startTime: windowEvents[0].timestamp,
@@ -119,20 +125,20 @@ export function groupWindowWatcherEvents(events) {
     };
 
     for (const event of windowEvents) {
-
+        // Вычисляем время начала и конца текущего события
         const eventStart = event.timestamp;
         const eventEnd = new Date(event.timestamp.getTime() + event.duration * 1000);
 
         if (event.data.app === currentGroup.app) {
-            // Check for overlap with last event in group
+            // Проверяем пересечение с последним событием в группе
             const lastEvent = currentGroup.events[currentGroup.events.length - 1];
             if (lastEvent) {
                 const lastEnd = new Date(lastEvent.timestamp.getTime() + lastEvent.duration * 1000);
                 if (eventStart < lastEnd) {
                     console.warn(`Overlapping window events for app ${event.data.app}: ${lastEvent.timestamp} - ${lastEnd} overlaps with ${eventStart} - ${eventEnd}`);
-                    // Take the longer duration
+                    // Берем более длительное событие
                     if (event.duration > lastEvent.duration) {
-                        // Replace last event
+                        // Заменяем последнее событие
                         currentGroup.totalDuration -= lastEvent.duration;
                         currentGroup.totalDuration += event.duration;
                         currentGroup.events[currentGroup.events.length - 1] = event;
@@ -142,16 +148,16 @@ export function groupWindowWatcherEvents(events) {
                 }
             }
 
-            // Add to current group
+            // Добавляем событие в текущую группу
             currentGroup.events.push(event);
             currentGroup.totalDuration += event.duration;
             currentGroup.endTime = eventEnd;
 
-            // Update title durations
+            // Обновляем длительности по заголовкам
             const title = normalizeTitle(event.data.title);
             currentGroup.titleDurations.set(title, (currentGroup.titleDurations.get(title) || 0) + event.duration);
         } else {
-            // Start new group
+            // Начинаем новую группу
             groups.push(currentGroup);
             currentGroup = {
                 app: event.data.app,
@@ -164,7 +170,119 @@ export function groupWindowWatcherEvents(events) {
         }
     }
 
-    groups.push(currentGroup); // Push the last group
+    groups.push(currentGroup); // Добавляем последнюю группу
 
-    return groups.filter(group => group.events.length > 1);
+    // Фильтруем группы с более чем 1 событием
+    const cleanGroups = groups.filter(group => group.events.length > 1);
+    const usedEvents = new Set();
+    cleanGroups.forEach(group => group.events.forEach(event => usedEvents.add(event)));
+    const notUsedInGrouping = windowEvents.filter(event => !usedEvents.has(event));
+
+    // Вычисляем глобальный timeline
+    const minTime = windowEvents[0].timestamp.getTime();
+    const maxTime = windowEvents[windowEvents.length - 1].timestamp.getTime() + windowEvents[windowEvents.length - 1].duration * 1000;
+
+    // Вычисляем holes
+    const holes = [];
+    if (cleanGroups.length > 0) {
+        // Первый hole
+        if (minTime < cleanGroups[0].startTime.getTime()) {
+            holes.push({ start: minTime, end: cleanGroups[0].startTime.getTime() });
+        }
+        // Между группами
+        for (let i = 0; i < cleanGroups.length - 1; i++) {
+            const endPrev = cleanGroups[i].endTime.getTime();
+            const startNext = cleanGroups[i + 1].startTime.getTime();
+            if (endPrev < startNext) {
+                holes.push({ start: endPrev, end: startNext });
+            }
+        }
+        // Последний hole
+        const lastEnd = cleanGroups[cleanGroups.length - 1].endTime.getTime();
+        if (lastEnd < maxTime) {
+            holes.push({ start: lastEnd, end: maxTime });
+        }
+    } else {
+        // Если нет чистых групп, один большой hole
+        holes.push({ start: minTime, end: maxTime });
+    }
+
+    // Группируем грязные группы
+    const dirtyGroups = [];
+    for (const hole of holes) {
+        const holeEvents = notUsedInGrouping.filter(e => {
+            const eStart = e.timestamp.getTime();
+            const eEnd = eStart + e.duration * 1000;
+            return eStart < hole.end && eEnd > hole.start;
+        }).sort((a, b) => a.timestamp - b.timestamp);
+
+        if (holeEvents.length === 0) continue;
+
+        // Группируем holeEvents аналогично чистым, но без app
+        let currentDirty = {
+            app: '',
+            startTime: holeEvents[0].timestamp,
+            totalDuration: holeEvents[0].duration,
+            titleDurations: new Map([[normalizeTitle(holeEvents[0].data.title), holeEvents[0].duration]]),
+            events: [holeEvents[0]],
+            endTime: new Date(hole.end)
+        };
+
+        for (const event of holeEvents.slice(1)) {
+            const eventStart = event.timestamp;
+            const eventEnd = new Date(event.timestamp.getTime() + event.duration * 1000);
+
+            // Проверяем пересечение с последним событием
+            const lastEvent = currentDirty.events[currentDirty.events.length - 1];
+            if (lastEvent) {
+                const lastEnd = new Date(lastEvent.timestamp.getTime() + lastEvent.duration * 1000);
+                if (eventStart < lastEnd) {
+                    console.warn(`Overlapping dirty events: ${lastEvent.timestamp} - ${lastEnd} overlaps with ${eventStart} - ${eventEnd}`);
+                    // Берем более длительное событие
+                    if (event.duration > lastEvent.duration) {
+                        currentDirty.events[currentDirty.events.length - 1] = event;
+                    }
+                    continue;
+                }
+            }
+
+            // Добавляем событие в текущую грязную группу
+            currentDirty.events.push(event);
+
+            // Обновляем длительности по заголовкам
+            const title = normalizeTitle(event.data.title);
+            currentDirty.titleDurations.set(title, (currentDirty.titleDurations.get(title) || 0) + event.duration);
+        }
+
+        // Вычисляем totalDuration от начала до конца
+        currentDirty.totalDuration = (currentDirty.endTime.getTime() - currentDirty.startTime.getTime()) / 1000;
+
+        const uniqueApps = new Set(currentDirty.events.map(e => e.data.app)).size;
+        currentDirty.uniqueApps = uniqueApps;
+
+        // Устанавливаем app как составное имя с длительностями, отсортированное по убыванию
+        const appDurations = new Map();
+        currentDirty.events.forEach(e => {
+            const app = e.data.app;
+            appDurations.set(app, (appDurations.get(app) || 0) + e.duration);
+        });
+        currentDirty.app = Array.from(appDurations.entries()).sort((a, b) => b[1] - a[1]).map(([app, dur]) => `${formatDuration(dur)} ${app.replace('.exe', '')}`).join('<br>');
+
+        // Добавляем если >1 событие
+        if (currentDirty.events.length > 1) {
+            dirtyGroups.push(currentDirty);
+        }
+    }
+
+    const allGroups = [...cleanGroups, ...dirtyGroups];
+    allGroups.forEach((group, idx) => {
+        const newNumber = idx + 1;
+        if (group.uniqueApps) {
+            group.id = `group-${newNumber}-${group.events.length}-${group.uniqueApps}`;
+        } else {
+            group.id = `group-${newNumber}-${group.events.length}`;
+        }
+    });
+
+    return allGroups;
 }

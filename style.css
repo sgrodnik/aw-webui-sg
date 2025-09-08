@@ -399,6 +399,12 @@ h1 {
     background-color: #f8f9fa;
 }
 
+.titles-item {
+    display: block;
+    white-space: nowrap;
+    overflow-x: auto;
+}
+
 .tick line {
     stroke: #ccc;
 }

@@ -40,8 +40,8 @@ async function loadAndProcessEvents(buckets) {
 
     // Group window watcher events
     const windowGroups = groupWindowWatcherEvents(allEvents);
-    const groupedEvents = windowGroups.map((group, index) => ({
-        id: `group-${index}`,
+    const groupedEvents = windowGroups.map((group) => ({
+        id: group.id,
         bucket: 'aw-watcher-window-group',
         timestamp: group.startTime,
         duration: group.totalDuration,

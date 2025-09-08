@@ -225,7 +225,7 @@ export function normalizeTitle(title) {
     if (!title) return title;
 
     // Remove common prefixes that indicate file state
-    const prefixesToRemove = ['● '];
+    const prefixesToRemove = ['● ', '* '];
     // Remove common suffixes
     const suffixesToRemove = [' - Visual Studio Code'];
 
@@ -249,6 +249,13 @@ export function normalizeTitle(title) {
                 normalizedTitle = normalizedTitle.substring(0, normalizedTitle.length - suffix.length);
                 changed = true;
             }
+        }
+
+        // Remove specific pattern with regex
+        const pattern = /: Original ↔ Cline's Changes \(Editable\) \([^)]+\)/g;
+        if (pattern.test(normalizedTitle)) {
+            normalizedTitle = normalizedTitle.replace(pattern, '');
+            changed = true;
         }
     }
 
